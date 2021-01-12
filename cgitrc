@@ -1,0 +1,6 @@
+# repository owner (e.g. your name)
+owner=Chuck Lever
+# repository description
+desc=NFSD and NFS/RDMA development
+# turn off .tar.gz snapshots for this repository
+snapshots=0
