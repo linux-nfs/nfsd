@@ -3822,6 +3822,15 @@ struct ib_qp *ib_open_qp(struct ib_xrcd *xrcd,
  */
 int ib_close_qp(struct ib_qp *qp);
 
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+
+int ib_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
+		 const struct ib_send_wr **bad_send_wr);
+int ib_post_recv(struct ib_qp *qp, const struct ib_recv_wr *recv_wr,
+		 const struct ib_recv_wr **bad_recv_wr);
+
+#else /* CONFIG_FAIL_RDMA_VERBS */
+
 /**
  * ib_post_send - Posts a list of work requests to the send queue of
  *   the specified QP.
@@ -3860,6 +3869,8 @@ static inline int ib_post_recv(struct ib_qp *qp,
 
 	return qp->device->ops.post_recv(qp, recv_wr, bad_recv_wr ? : &dummy);
 }
+
+#endif /* CONFIG_FAIL_RDMA_VERBS */
 
 struct ib_cq *__ib_alloc_cq(struct ib_device *dev, void *private, int nr_cqe,
 			    int comp_vector, enum ib_poll_context poll_ctx,

@@ -2788,6 +2788,49 @@ next_page:
 }
 EXPORT_SYMBOL(ib_sg_to_pages);
 
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+
+/**
+ * ib_post_send - Post Work Requests to a Send Queue
+ * @qp: The QP to post the Work Requests on.
+ * @send_wr: A list of Work Requests to post on the Send Queue.
+ * @bad_send_wr: On an immediate failure, this parameter references
+ *   the Work Request that failed to be posted on the QP.
+ *
+ * Although IBA Vol. 1 section 11.4.1.1 specifies that if an immediate
+ * error is returned, the QP state shall not be affected, ib_post_send()
+ * can return an immediate error after queueing earlier Work Requests
+ * in the list.
+ */
+int ib_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
+		 const struct ib_send_wr **bad_send_wr)
+{
+	const struct ib_send_wr *dummy;
+	const struct ib_send_wr **bad_wr = bad_send_wr ? : &dummy;
+
+	return qp->device->ops.post_send(qp, send_wr, bad_wr);
+}
+EXPORT_SYMBOL(ib_post_send);
+
+/**
+ * ib_post_recv - Post Work Requests to a Receive Queue
+ * @qp: The QP to post the Work Requests on.
+ * @recv_wr: A list of Work Requests to post on the Receive Queue.
+ * @bad_recv_wr: On an immediate failure, this parameter references
+ *   the Work Request that failed to be posted on the QP.
+ */
+int ib_post_recv(struct ib_qp *qp, const struct ib_recv_wr *recv_wr,
+		 const struct ib_recv_wr **bad_recv_wr)
+{
+	const struct ib_recv_wr *dummy;
+	const struct ib_recv_wr **bad_wr = bad_recv_wr ? : &dummy;
+
+	return qp->device->ops.post_recv(qp, recv_wr, bad_wr);
+}
+EXPORT_SYMBOL(ib_post_recv);
+
+#endif /* CONFIG_FAIL_RDMA_VERBS */
+
 struct ib_drain_cqe {
 	struct ib_cqe cqe;
 	struct completion done;
