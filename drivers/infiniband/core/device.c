@@ -559,6 +559,60 @@ static void rdma_init_coredev(struct ib_core_device *coredev,
 	write_pnet(&coredev->rdma_net, net);
 }
 
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+
+/*
+ * Allocate a per-device PD and MR that are used for fault
+ * injection. They are not exposed to RDMA core consumers.
+ */
+static void ib_init_fault_injection(struct ib_device *device)
+{
+	struct ib_pd *pd;
+	struct ib_mr *mr;
+
+	device->fault_pd = NULL;
+	device->fault_mr = NULL;
+
+	pd = ib_alloc_pd(device, 0);
+	if (IS_ERR(pd))
+		return;
+
+	mr = ib_alloc_mr(pd, IB_MR_TYPE_MEM_REG, 1);
+	if (IS_ERR(mr)) {
+		ib_dealloc_pd(pd);
+		return;
+	}
+
+	device->fault_mr = mr;
+	device->fault_pd = pd;
+}
+
+static void ib_cleanup_fault_injection(struct ib_device *device)
+{
+	struct ib_pd *pd = device->fault_pd;
+	struct ib_mr *mr = device->fault_mr;
+
+	device->fault_mr = NULL;
+	device->fault_pd = NULL;
+
+	if (mr)
+		ib_dereg_mr(mr);
+	if (pd)
+		ib_dealloc_pd(pd);
+}
+
+#else /* CONFIG_FAIL_RDMA_VERBS */
+
+static inline void ib_init_fault_injection(struct ib_device *device)
+{
+}
+
+static inline void ib_cleanup_fault_injection(struct ib_device *device)
+{
+}
+
+#endif /* CONFIG_FAIL_RDMA_VERBS */
+
 /**
  * _ib_alloc_device - allocate an IB device struct
  * @size:size of structure to allocate
@@ -1444,6 +1498,7 @@ int ib_register_device(struct ib_device *device, const char *name,
 	kobject_uevent(&device->dev.kobj, KOBJ_ADD);
 	ib_device_put(device);
 
+	ib_init_fault_injection(device);
 	return 0;
 
 dev_cleanup:
@@ -1460,6 +1515,8 @@ EXPORT_SYMBOL(ib_register_device);
 /* Callers must hold a get on the device. */
 static void __ib_unregister_device(struct ib_device *ib_dev)
 {
+	ib_cleanup_fault_injection(ib_dev);
+
 	/*
 	 * We have a registration lock so that all the calls to unregister are
 	 * fully fenced, once any unregister returns the device is truely

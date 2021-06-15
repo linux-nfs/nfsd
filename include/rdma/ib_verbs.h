@@ -2781,6 +2781,11 @@ struct ib_device {
 	char iw_ifname[IFNAMSIZ];
 	u32 iw_driver_flags;
 	u32 lag_flags;
+
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+	struct ib_pd *fault_pd;
+	struct ib_mr *fault_mr;
+#endif
 };
 
 static inline void *rdma_zalloc_obj(struct ib_device *dev, size_t size,
