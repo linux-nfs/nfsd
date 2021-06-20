@@ -269,6 +269,36 @@ enum rdma_link_layer rdma_port_get_link_layer(struct ib_device *device,
 }
 EXPORT_SYMBOL(rdma_port_get_link_layer);
 
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+
+#include <linux/fault-inject.h>
+
+struct fail_rdma_verbs_attr fail_rdma_verbs = {
+	.attr			= FAULT_ATTR_INITIALIZER,
+};
+
+/**
+ * fail_rdma_verbs_debugfs_init - Initialize fault injection
+ *
+ */
+void fail_rdma_verbs_debugfs_init(void)
+{
+	fault_create_debugfs_attr("fail_rdma_verbs", NULL,
+				  &fail_rdma_verbs.attr);
+}
+
+#else /* CONFIG_FAIL_RDMA_VERBS */
+
+/**
+ * fail_rdma_verbs_debugfs_init - Initialize fault injection
+ *
+ */
+void fail_rdma_verbs_debugfs_init(void)
+{
+}
+
+#endif /* CONFIG_FAIL_RDMA_VERBS */
+
 /* Protection domains */
 
 /**

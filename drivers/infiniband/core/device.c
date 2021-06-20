@@ -2816,6 +2816,7 @@ static int __init ib_core_init(void)
 	nldev_init();
 	rdma_nl_register(RDMA_NL_LS, ibnl_ls_cb_table);
 	roce_gid_mgmt_init();
+	fail_rdma_verbs_debugfs_init();
 
 	return 0;
 

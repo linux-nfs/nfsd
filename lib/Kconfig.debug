@@ -1960,6 +1960,14 @@ config FAIL_SUNRPC
 	  Provide fault-injection capability for SunRPC and
 	  its consumers.
 
+config FAIL_RDMA_VERBS
+	bool "Fault-injection capability for RDMA verbs"
+	depends on FAULT_INJECTION_DEBUG_FS && INFINIBAND
+	help
+	  Enable fault-injection for the RDMA core and its consumers.
+	  This enables injection of errors returned from various
+	  functions in the RDMA verbs API.
+
 config FAULT_INJECTION_STACKTRACE_FILTER
 	bool "stacktrace filter for fault-injection capabilities"
 	depends on FAULT_INJECTION_DEBUG_FS && STACKTRACE_SUPPORT

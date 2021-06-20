@@ -373,4 +373,19 @@ void rdma_umap_priv_init(struct rdma_umap_priv *priv,
 
 void ib_cq_pool_cleanup(struct ib_device *dev);
 
+void fail_rdma_verbs_debugfs_init(void);
+
+#include <linux/fault-inject.h>
+
+#if IS_ENABLED(CONFIG_FAULT_INJECTION)
+
+struct fail_rdma_verbs_attr {
+	struct fault_attr	attr;
+};
+
+extern struct fail_rdma_verbs_attr fail_rdma_verbs;
+
+#endif /* CONFIG_FAULT_INJECTION */
+
+
 #endif /* _CORE_PRIV_H */
