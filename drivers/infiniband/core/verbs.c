@@ -283,8 +283,17 @@ struct fail_rdma_verbs_attr fail_rdma_verbs = {
  */
 void fail_rdma_verbs_debugfs_init(void)
 {
-	fault_create_debugfs_attr("fail_rdma_verbs", NULL,
-				  &fail_rdma_verbs.attr);
+	struct dentry *dir;
+
+	dir = fault_create_debugfs_attr("fail_rdma_verbs", NULL,
+					&fail_rdma_verbs.attr);
+
+	debugfs_create_bool("ignore-post-recv", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_post_recv);
+	debugfs_create_bool("ignore-immediate", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_immediate);
+	debugfs_create_bool("ignore-flush", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_flush);
 }
 
 #else /* CONFIG_FAIL_RDMA_VERBS */
@@ -2812,6 +2821,46 @@ int ib_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
 }
 EXPORT_SYMBOL(ib_post_send);
 
+static noinline int
+ib_maybe_fail_post_recv(struct ib_qp *qp, const struct ib_recv_wr *recv_wr,
+			const struct ib_recv_wr **bad_wr)
+{
+	struct ib_mr *fault_mr = qp->device->fault_mr;
+	bool restore_num_sge, restore_key;
+	int ret, saved_num_sge;
+	struct ib_recv_wr *wr;
+	u32 saved_key;
+
+	restore_num_sge = false;
+	restore_key = false;
+	for_each_recv_wr(wr, recv_wr) {
+		if (!fail_rdma_verbs.ignore_immediate &&
+		    should_fail(&fail_rdma_verbs.attr, 1)) {
+			restore_num_sge = true;
+			saved_num_sge = wr->num_sge;
+			wr->num_sge = 0x7fffffff;
+			break;
+		}
+
+		if (!fail_rdma_verbs.ignore_flush &&
+		    should_fail(&fail_rdma_verbs.attr, 1)) {
+			restore_key = true;
+			saved_key = wr->sg_list[0].lkey;
+			wr->sg_list[0].lkey = fault_mr->lkey;
+			break;
+		}
+	}
+
+	ret = qp->device->ops.post_recv(qp, recv_wr, bad_wr);
+
+	if (restore_num_sge)
+		wr->num_sge = saved_num_sge;
+	if (restore_key)
+		wr->sg_list[0].lkey = saved_key;
+	return ret;
+}
+
+
 /**
  * ib_post_recv - Post Work Requests to a Receive Queue
  * @qp: The QP to post the Work Requests on.
@@ -2825,6 +2874,8 @@ int ib_post_recv(struct ib_qp *qp, const struct ib_recv_wr *recv_wr,
 	const struct ib_recv_wr *dummy;
 	const struct ib_recv_wr **bad_wr = bad_recv_wr ? : &dummy;
 
+	if (!fail_rdma_verbs.ignore_post_recv)
+		return ib_maybe_fail_post_recv(qp, recv_wr, bad_wr);
 	return qp->device->ops.post_recv(qp, recv_wr, bad_wr);
 }
 EXPORT_SYMBOL(ib_post_recv);
