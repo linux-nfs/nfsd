@@ -382,6 +382,8 @@ void fail_rdma_verbs_debugfs_init(void);
 struct fail_rdma_verbs_attr {
 	struct fault_attr	attr;
 
+	int			opcode;
+	bool			ignore_post_send;
 	bool			ignore_post_recv;
 	bool			ignore_immediate;
 	bool			ignore_flush;

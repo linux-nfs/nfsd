@@ -275,6 +275,56 @@ EXPORT_SYMBOL(rdma_port_get_link_layer);
 
 struct fail_rdma_verbs_attr fail_rdma_verbs = {
 	.attr			= FAULT_ATTR_INITIALIZER,
+	.opcode			= IB_WR_SEND,
+};
+
+static ssize_t
+debugfs_read_file_opcode(struct file *file, char __user *user_buf,
+			 size_t count, loff_t *ppos)
+{
+	struct dentry *dentry = file->f_path.dentry;
+	char buf[32];
+	int len, r, val;
+
+	r = debugfs_file_get(dentry);
+	if (unlikely(r))
+		return r;
+	val = *(int *)file->private_data;
+	debugfs_file_put(dentry);
+
+	len = snprintf(buf, sizeof(buf), "%s\n", ib_wr_opcode_msg(val));
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static ssize_t
+debugfs_write_file_opcode(struct file *file, const char __user *user_buf,
+			  size_t count, loff_t *ppos)
+{
+	struct dentry *dentry = file->f_path.dentry;
+	int bv, r, *val = file->private_data;
+
+	r = kstrtoint_from_user(user_buf, count, 10, &bv);
+	if (!r) {
+		r = debugfs_file_get(dentry);
+		if (unlikely(r))
+			return r;
+		if (bv < 0 || bv > IB_WR_REG_MR_INTEGRITY) {
+			debugfs_file_put(dentry);
+			return -EINVAL;
+		}
+
+		*val = bv;
+		debugfs_file_put(dentry);
+	}
+
+	return count;
+}
+
+static const struct file_operations fops_opcode = {
+	.read			= debugfs_read_file_opcode,
+	.write			= debugfs_write_file_opcode,
+	.open			= simple_open,
+	.llseek			= default_llseek,
 };
 
 /**
@@ -288,6 +338,11 @@ void fail_rdma_verbs_debugfs_init(void)
 	dir = fault_create_debugfs_attr("fail_rdma_verbs", NULL,
 					&fail_rdma_verbs.attr);
 
+	debugfs_create_file_unsafe("opcode-filter", S_IFREG | 0600, dir,
+				   &fail_rdma_verbs.opcode, &fops_opcode);
+
+	debugfs_create_bool("ignore-post-send", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_post_send);
 	debugfs_create_bool("ignore-post-recv", S_IFREG | 0600, dir,
 			    &fail_rdma_verbs.ignore_post_recv);
 	debugfs_create_bool("ignore-immediate", S_IFREG | 0600, dir,
@@ -2799,6 +2854,125 @@ EXPORT_SYMBOL(ib_sg_to_pages);
 
 #if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
 
+static u32 ib_flush_posted_wr(struct ib_qp *qp, struct ib_send_wr *wr,
+			      const struct ib_send_wr **bad_wr)
+{
+	struct ib_mr *fault_mr = qp->device->fault_mr;
+#ifdef REMOTE_KEY
+	struct ib_rdma_wr *rdma_wr;
+#endif
+	struct ib_reg_wr *reg_wr;
+	u32 saved_key;
+
+	switch (wr->opcode) {
+	case IB_WR_SEND:
+	case IB_WR_SEND_WITH_IMM:
+		saved_key = wr->sg_list[0].lkey;
+		if (fault_mr)
+			wr->sg_list[0].lkey = fault_mr->lkey;
+		break;
+#ifdef REMOTE_KEY
+	case IB_WR_RDMA_READ:
+	case IB_WR_RDMA_WRITE:
+	case IB_WR_RDMA_WRITE_WITH_IMM:
+		rdma_wr = container_of(wr, struct ib_rdma_wr, wr);
+		saved_key = rdma_wr->rkey;
+		if (fault_mr)
+			rdma_wr->rkey = fault_mr->lkey;
+		break;
+#endif
+	case IB_WR_REG_MR:
+	case IB_WR_REG_MR_INTEGRITY:
+		reg_wr = container_of(wr, struct ib_reg_wr, wr);
+		saved_key = reg_wr->key;
+		if (fault_mr)
+			reg_wr->key = fault_mr->lkey;
+		break;
+	case IB_WR_SEND_WITH_INV:
+	case IB_WR_RDMA_READ_WITH_INV:
+	case IB_WR_LOCAL_INV:
+		saved_key = wr->ex.invalidate_rkey;
+		if (fault_mr)
+			wr->ex.invalidate_rkey = fault_mr->lkey;
+		break;
+	default:
+		break;
+	}
+
+	return saved_key;
+}
+
+static void ib_restore_posted_wr(struct ib_send_wr *wr, u32 saved_key)
+{
+	struct ib_reg_wr *reg_wr;
+
+	switch (wr->opcode) {
+	case IB_WR_SEND:
+	case IB_WR_SEND_WITH_IMM:
+		wr->sg_list[0].lkey = saved_key;
+		break;
+#ifdef REMOTE_KEY
+	case IB_WR_RDMA_READ:
+	case IB_WR_RDMA_WRITE:
+	case IB_WR_RDMA_WRITE_WITH_IMM:
+		rdma_wr->rkey = saved_key;
+		break;
+#endif
+	case IB_WR_REG_MR:
+	case IB_WR_REG_MR_INTEGRITY:
+		reg_wr = container_of(wr, struct ib_reg_wr, wr);
+		reg_wr->key = saved_key;
+		break;
+	case IB_WR_SEND_WITH_INV:
+	case IB_WR_RDMA_READ_WITH_INV:
+	case IB_WR_LOCAL_INV:
+		wr->ex.invalidate_rkey = saved_key;
+		break;
+	default:
+		break;
+	}
+}
+
+static noinline int
+ib_maybe_fail_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
+			const struct ib_send_wr **bad_wr)
+{
+	bool restore_num_sge, restore_key;
+	int ret, saved_num_sge;
+	struct ib_send_wr *wr;
+	u32 saved_key;
+
+	restore_num_sge = false;
+	restore_key = false;
+	for_each_send_wr(wr, send_wr) {
+		if (wr->opcode != fail_rdma_verbs.opcode)
+			continue;
+
+		if (!fail_rdma_verbs.ignore_immediate &&
+		    should_fail(&fail_rdma_verbs.attr, 1)) {
+			restore_num_sge = true;
+			saved_num_sge = wr->num_sge;
+			wr->num_sge = 0x7fffffff;
+			break;
+		}
+
+		if (!fail_rdma_verbs.ignore_flush &&
+		    should_fail(&fail_rdma_verbs.attr, 1)) {
+			restore_key = true;
+			saved_key = ib_flush_posted_wr(qp, wr, bad_wr);
+			break;
+		}
+	}
+
+	ret = qp->device->ops.post_send(qp, send_wr, bad_wr);
+
+	if (restore_num_sge)
+		wr->num_sge = saved_num_sge;
+	if (restore_key)
+		ib_restore_posted_wr(wr, saved_key);
+	return ret;
+}
+
 /**
  * ib_post_send - Post Work Requests to a Send Queue
  * @qp: The QP to post the Work Requests on.
@@ -2817,6 +2991,8 @@ int ib_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
 	const struct ib_send_wr *dummy;
 	const struct ib_send_wr **bad_wr = bad_send_wr ? : &dummy;
 
+	if (!fail_rdma_verbs.ignore_post_send)
+		return ib_maybe_fail_post_send(qp, send_wr, bad_wr);
 	return qp->device->ops.post_send(qp, send_wr, bad_wr);
 }
 EXPORT_SYMBOL(ib_post_send);
