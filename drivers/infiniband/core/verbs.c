@@ -123,6 +123,33 @@ const char *__attribute_const__ ib_wc_status_msg(enum ib_wc_status status)
 }
 EXPORT_SYMBOL(ib_wc_status_msg);
 
+static const char * const ib_wr_opcodes[] = {
+	[IB_WR_RDMA_WRITE]		= "RDMA_WRITE",
+	[IB_WR_RDMA_WRITE_WITH_IMM]	= "RDMA_WRITE_WITH_IMM",
+	[IB_WR_SEND]			= "SEND",
+	[IB_WR_SEND_WITH_IMM]		= "SEND_WITH_IMM",
+	[IB_WR_RDMA_READ]		= "RDMA_READ",
+	[IB_WR_ATOMIC_CMP_AND_SWP]	= "ATOMIC_CMP_AND_SWP",
+	[IB_WR_ATOMIC_FETCH_AND_ADD]	= "ATOMIC_FETCH_AND_ADD",
+	[IB_WR_BIND_MW]			= "BIND_MW",
+	[IB_WR_LSO]			= "LSO",
+	[IB_WR_SEND_WITH_INV]		= "SEND_WITH_INV",
+	[IB_WR_RDMA_READ_WITH_INV]	= "READ_WITH_INV",
+	[IB_WR_LOCAL_INV]		= "LOCAL_INV",
+	[IB_WR_MASKED_ATOMIC_CMP_AND_SWP] = "MASKED_ATOMIC_CMP_AND_SWP",
+	[IB_WR_MASKED_ATOMIC_FETCH_AND_ADD] = "MASKED_ATOMIC_FETCH_AND_ADD",
+	[IB_WR_REG_MR]			= "REG_MR",
+	[IB_WR_REG_MR_INTEGRITY]	= "REG_MR_INTEGRITY",
+};
+
+const char *__attribute_const__ ib_wr_opcode_msg(enum ib_wr_opcode opcode)
+{
+	size_t index = opcode;
+
+	return (index < ARRAY_SIZE(ib_wr_opcodes) && ib_wr_opcodes[index]) ?
+			ib_wr_opcodes[index] : "unrecognized";
+}
+
 __attribute_const__ int ib_rate_to_mult(enum ib_rate rate)
 {
 	switch (rate) {

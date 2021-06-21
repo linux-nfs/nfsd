@@ -1331,6 +1331,8 @@ enum ib_wr_opcode {
 	IB_WR_RESERVED10,
 };
 
+const char *__attribute_const__ ib_wr_opcode_msg(enum ib_wr_opcode opcode);
+
 enum ib_send_flags {
 	IB_SEND_FENCE		= 1,
 	IB_SEND_SIGNALED	= (1<<1),
