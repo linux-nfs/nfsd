@@ -1369,6 +1369,14 @@ struct ib_send_wr {
 	} ex;
 };
 
+/**
+ * for_each_send_wr - iterate over a chain of Send Work Requests
+ * @pos: the loop cursor.
+ * @first: pointer to the first Work Request
+ */
+#define for_each_send_wr(pos, first) \
+	for (pos = (struct ib_send_wr *)(first); pos; pos = pos->next)
+
 struct ib_rdma_wr {
 	struct ib_send_wr	wr;
 	u64			remote_addr;
@@ -1433,6 +1441,14 @@ struct ib_recv_wr {
 	struct ib_sge	       *sg_list;
 	int			num_sge;
 };
+
+/**
+ * for_each_recv_wr - iterate over a chain of Receive Work Requests
+ * @pos: the loop cursor.
+ * @first: pointer to the first Work Request
+ */
+#define for_each_recv_wr(pos, first) \
+	for (pos = (struct ib_recv_wr *)(first); pos; pos = pos->next)
 
 enum ib_access_flags {
 	IB_ACCESS_LOCAL_WRITE = IB_UVERBS_ACCESS_LOCAL_WRITE,
