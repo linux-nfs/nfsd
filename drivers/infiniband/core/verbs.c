@@ -349,6 +349,8 @@ void fail_rdma_verbs_debugfs_init(void)
 			    &fail_rdma_verbs.ignore_immediate);
 	debugfs_create_bool("ignore-flush", S_IFREG | 0600, dir,
 			    &fail_rdma_verbs.ignore_flush);
+	debugfs_create_bool("ignore-alloc-mr", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_alloc_mr);
 }
 
 #else /* CONFIG_FAIL_RDMA_VERBS */
@@ -2343,6 +2345,14 @@ struct ib_mr *ib_alloc_mr(struct ib_pd *pd, enum ib_mr_type mr_type,
 		goto out;
 	}
 
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+	if (!fail_rdma_verbs.ignore_alloc_mr &&
+	    should_fail(&fail_rdma_verbs.attr, 1)) {
+		mr = ERR_PTR(-ENOMEM);
+		goto out;
+	}
+#endif
+
 	if (mr_type == IB_MR_TYPE_INTEGRITY) {
 		WARN_ON_ONCE(1);
 		mr = ERR_PTR(-EINVAL);
@@ -2395,6 +2405,14 @@ struct ib_mr *ib_alloc_mr_integrity(struct ib_pd *pd,
 		mr = ERR_PTR(-EOPNOTSUPP);
 		goto out;
 	}
+
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+	if (!fail_rdma_verbs.ignore_alloc_mr &&
+	    should_fail(&fail_rdma_verbs.attr, 1)) {
+		mr = ERR_PTR(-ENOMEM);
+		goto out;
+	}
+#endif
 
 	if (!max_num_meta_sg) {
 		mr = ERR_PTR(-EINVAL);
