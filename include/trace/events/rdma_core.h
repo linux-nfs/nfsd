@@ -389,6 +389,108 @@ TRACE_EVENT(mr_dereg,
 	TP_printk("mr.id=%u", __entry->id)
 );
 
+/*
+ * enum ib_qp_attr_mask, from include/rdma/ib_verbs.h
+ */
+TRACE_DEFINE_ENUM(IB_QP_STATE);
+TRACE_DEFINE_ENUM(IB_QP_CUR_STATE);
+TRACE_DEFINE_ENUM(IB_QP_EN_SQD_ASYNC_NOTIFY);
+TRACE_DEFINE_ENUM(IB_QP_ACCESS_FLAGS);
+TRACE_DEFINE_ENUM(IB_QP_PKEY_INDEX);
+TRACE_DEFINE_ENUM(IB_QP_PORT);
+TRACE_DEFINE_ENUM(IB_QP_QKEY);
+TRACE_DEFINE_ENUM(IB_QP_AV);
+TRACE_DEFINE_ENUM(IB_QP_PATH_MTU);
+TRACE_DEFINE_ENUM(IB_QP_TIMEOUT);
+TRACE_DEFINE_ENUM(IB_QP_RETRY_CNT);
+TRACE_DEFINE_ENUM(IB_QP_RNR_RETRY);
+TRACE_DEFINE_ENUM(IB_QP_RQ_PSN);
+TRACE_DEFINE_ENUM(IB_QP_MAX_QP_RD_ATOMIC);
+TRACE_DEFINE_ENUM(IB_QP_ALT_PATH);
+TRACE_DEFINE_ENUM(IB_QP_MIN_RNR_TIMER);
+TRACE_DEFINE_ENUM(IB_QP_SQ_PSN);
+TRACE_DEFINE_ENUM(IB_QP_MAX_DEST_RD_ATOMIC);
+TRACE_DEFINE_ENUM(IB_QP_PATH_MIG_STATE);
+TRACE_DEFINE_ENUM(IB_QP_CAP);
+TRACE_DEFINE_ENUM(IB_QP_DEST_QPN);
+TRACE_DEFINE_ENUM(IB_QP_RATE_LIMIT);
+
+#define show_ib_qp_attr_mask(mask)					\
+	__print_flags(mask, "|",					\
+		{ IB_QP_STATE,		"STATE" },			\
+		{ IB_QP_CUR_STATE,	"CUR_STATE" },			\
+		{ IB_QP_EN_SQD_ASYNC_NOTIFY, "EN_SQD_ASYNC_NOTIFY" },	\
+		{ IB_QP_ACCESS_FLAGS,	"ACCESS_FLAGS" },		\
+		{ IB_QP_PKEY_INDEX,	"PKEY_INDEX" },			\
+		{ IB_QP_PORT,		"PORT" },			\
+		{ IB_QP_QKEY,		"QKEY" },			\
+		{ IB_QP_AV,		"AV" },				\
+		{ IB_QP_PATH_MTU,	"PATH_MTU" },			\
+		{ IB_QP_TIMEOUT,	"TIMEOUT" },			\
+		{ IB_QP_RETRY_CNT,	"RETRY_CNT" },			\
+		{ IB_QP_RNR_RETRY,	"RNR_RETRY" },			\
+		{ IB_QP_RQ_PSN,		"RQ_PSN" },			\
+		{ IB_QP_MAX_QP_RD_ATOMIC, "MAX_QP_RD_ATOMIC" },		\
+		{ IB_QP_ALT_PATH,	"ALT_PATH" },			\
+		{ IB_QP_MIN_RNR_TIMER,	"MIN_RNR_TIMER" },		\
+		{ IB_QP_SQ_PSN,		"SQ_PSN" },			\
+		{ IB_QP_MAX_DEST_RD_ATOMIC, "MAX_DEST_RD_ATOMIC" },	\
+		{ IB_QP_PATH_MIG_STATE,	"PATH_MIG_STATE" },		\
+		{ IB_QP_CAP,		"CAP" },			\
+		{ IB_QP_DEST_QPN,	"DEST_QPN" },			\
+		{ IB_QP_RATE_LIMIT,	"RATE_LIMIT" })
+
+/*
+ * enum ib_qp_state, from include/rdma/ib_verbs.h
+ */
+TRACE_DEFINE_ENUM(IB_QPS_RESET);
+TRACE_DEFINE_ENUM(IB_QPS_INIT);
+TRACE_DEFINE_ENUM(IB_QPS_RTR);
+TRACE_DEFINE_ENUM(IB_QPS_RTS);
+TRACE_DEFINE_ENUM(IB_QPS_SQD);
+TRACE_DEFINE_ENUM(IB_QPS_SQE);
+TRACE_DEFINE_ENUM(IB_QPS_ERR);
+
+#define show_ib_qp_state(state)						\
+	__print_symbolic(state,						\
+		{ IB_QPS_RESET,		"RESET"	},			\
+		{ IB_QPS_INIT,		"INIT"	},			\
+		{ IB_QPS_RTR,		"RTR"	},			\
+		{ IB_QPS_RTS,		"RTS"	},			\
+		{ IB_QPS_SQD,		"SQD"	},			\
+		{ IB_QPS_SQE,		"SQE"	},			\
+		{ IB_QPS_ERR,		"ERR"	})
+
+TRACE_EVENT(qp_modify,
+	TP_PROTO(
+		const struct ib_qp *qp,
+		const struct ib_qp_attr *attr,
+		int attr_mask,
+		int ret
+	),
+
+	TP_ARGS(qp, attr, attr_mask, ret),
+
+	TP_STRUCT__entry(
+		__field(u32, id)
+		__field(unsigned long, attr_mask)
+		__field(unsigned long, new_state)
+		__field(int, ret)
+	),
+
+	TP_fast_assign(
+		__entry->id = qp->res.id;
+		__entry->attr_mask = attr_mask;
+		__entry->new_state = attr->qp_state;
+		__entry->ret = ret;
+	),
+
+	TP_printk("qp.id=%u attr_mask=%s new_state=%s ret=%d",
+		__entry->id, show_ib_qp_attr_mask(__entry->attr_mask),
+		show_ib_qp_state(__entry->new_state), __entry->ret
+	)
+);
+
 #endif /* _TRACE_RDMA_CORE_H */
 
 #include <trace/define_trace.h>

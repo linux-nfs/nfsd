@@ -1891,7 +1891,7 @@ static int _ib_modify_qp(struct ib_qp *qp, struct ib_qp_attr *attr,
 		ret = rdma_fill_sgid_attr(qp->device, &attr->ah_attr,
 					  &old_sgid_attr_av);
 		if (ret)
-			return ret;
+			goto out_trace;
 
 		if (attr->ah_attr.type == RDMA_AH_ATTR_TYPE_ROCE &&
 		    is_qp_type_connected(qp)) {
@@ -1988,6 +1988,9 @@ out_av:
 		rdma_lag_put_ah_roce_slave(attr->xmit_slave);
 		rdma_unfill_sgid_attr(&attr->ah_attr, old_sgid_attr_av);
 	}
+
+out_trace:
+	trace_qp_modify(qp, attr, attr_mask, ret);
 	return ret;
 }
 
