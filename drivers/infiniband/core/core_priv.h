@@ -388,6 +388,7 @@ struct fail_rdma_verbs_attr {
 	bool			ignore_immediate;
 	bool			ignore_flush;
 	bool			ignore_alloc_mr;
+	bool			ignore_modify_qp;
 };
 
 extern struct fail_rdma_verbs_attr fail_rdma_verbs;

@@ -351,6 +351,8 @@ void fail_rdma_verbs_debugfs_init(void)
 			    &fail_rdma_verbs.ignore_flush);
 	debugfs_create_bool("ignore-alloc-mr", S_IFREG | 0600, dir,
 			    &fail_rdma_verbs.ignore_alloc_mr);
+	debugfs_create_bool("ignore-modify-qp", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_modify_qp);
 }
 
 #else /* CONFIG_FAIL_RDMA_VERBS */
@@ -1885,6 +1887,14 @@ static int _ib_modify_qp(struct ib_qp *qp, struct ib_qp_attr *attr,
 	const struct ib_gid_attr *old_sgid_attr_av;
 	const struct ib_gid_attr *old_sgid_attr_alt_av;
 	int ret;
+
+#if IS_ENABLED(CONFIG_FAIL_RDMA_VERBS)
+	if (!fail_rdma_verbs.ignore_modify_qp &&
+	    should_fail(&fail_rdma_verbs.attr, 1)) {
+		ret = -EINVAL;
+		goto out_trace;
+	}
+#endif
 
 	attr->xmit_slave = NULL;
 	if (attr_mask & IB_QP_AV) {
