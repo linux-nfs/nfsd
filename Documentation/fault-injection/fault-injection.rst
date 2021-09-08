@@ -52,6 +52,12 @@ Available fault injection capabilities
   status code is NVME_SC_INVALID_OPCODE with no retry. The status code and
   retry flag can be set via the debugfs.
 
+- fail_rdma_verbs
+
+  injects flushed completions or immediate errors when posting Work
+  Requests, or triggers failures of QP state modification or when
+  creating MRs.
+
 
 Configure fault-injection capabilities behavior
 -----------------------------------------------
@@ -168,6 +174,69 @@ configuration of fault-injection capabilities.
 
 	default is 'N', setting it to 'Y' will disable disconnect
 	injection on the RPC server.
+
+- /sys/kernel/debug/fail_rdma_verbs/opcode-filter:
+
+	specifies a particular Send WR opcode to target when
+	injecting errors. The opcode is set by echoing an integer
+	into this file. The filtered opcode is displayed
+	symbolically when catting the file.
+
+	Default is to inject flush errors only on Send WRs.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-post-send:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents errors from
+	being injected on Send Queues.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-post-recv:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents errors from
+	being injected on Receive Queues.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-immediate:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents the injection
+	of immediate errors.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-flush:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents the injection
+	of flushed completions.
+
+	Note that Receive WRs that are corrupted via fault injection
+	remain until they complete or are drained. Receive completion
+	can occur long _after_ fault injection for ib_post_recv() has
+	been disabled.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-alloc-mr:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents the injection
+	of errors when allocating MRs.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-modify-qp:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents the injection
+	of errors when modifying QP state.
+
+- /sys/kernel/debug/fail_rdma_verbs/ignore-cq-errors:
+
+	Format: { 'Y' | 'N' }
+
+	default is 'N', setting it to 'Y' prevents the injection
+	of CQ errors when posting Send and Receive WRs.
 
 - /sys/kernel/debug/fail_function/inject:
 
