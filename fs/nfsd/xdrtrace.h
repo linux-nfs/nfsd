@@ -38,6 +38,41 @@
 
 #define TRACE_XDR_VARARGS	__entry->xid, __get_str(procname)
 
+
+DECLARE_EVENT_CLASS(svc_xdr_err_class,
+	TP_PROTO(
+		const struct svc_rqst *rqstp
+	),
+	TP_ARGS(rqstp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(unsigned int, netns_ino)
+		__sockaddr(server, rqstp->rq_xprt->xpt_locallen)
+		__sockaddr(client, rqstp->rq_xprt->xpt_remotelen)
+	),
+	TP_fast_assign(
+		const struct svc_xprt *xprt = rqstp->rq_xprt;
+
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->netns_ino = xprt->xpt_net->ns.inum;
+		__assign_sockaddr(server, &xprt->xpt_local, xprt->xpt_locallen);
+		__assign_sockaddr(client, &xprt->xpt_remote, xprt->xpt_remotelen);
+	),
+	TP_printk("xid=0x%08x NFSv%u %s",
+		__entry->xid, __entry->version, __get_str(procname)
+	)
+);
+
+#define DEFINE_SVC_XDR_ERR_EVENT(name) \
+DEFINE_EVENT(svc_xdr_err_class, name, \
+	TP_PROTO(const struct svc_rqst *rqstp), \
+	TP_ARGS(rqstp))
+
+DEFINE_SVC_XDR_ERR_EVENT(nfsd_garbage_args_err);
+DEFINE_SVC_XDR_ERR_EVENT(nfsd_cant_encode_err);
+
 #endif /* _NFSD_XDR_TRACE_H */
 
 #undef TRACE_INCLUDE_PATH

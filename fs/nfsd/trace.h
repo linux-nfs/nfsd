@@ -31,42 +31,6 @@
 			       rqstp->rq_xprt->xpt_remotelen); \
 		} while (0);
 
-DECLARE_EVENT_CLASS(nfsd_xdr_err_class,
-	TP_PROTO(
-		const struct svc_rqst *rqstp
-	),
-	TP_ARGS(rqstp),
-	TP_STRUCT__entry(
-		__field(unsigned int, netns_ino)
-		__field(u32, xid)
-		__field(u32, vers)
-		__field(u32, proc)
-		__sockaddr(server, rqstp->rq_xprt->xpt_locallen)
-		__sockaddr(client, rqstp->rq_xprt->xpt_remotelen)
-	),
-	TP_fast_assign(
-		const struct svc_xprt *xprt = rqstp->rq_xprt;
-
-		__entry->netns_ino = xprt->xpt_net->ns.inum;
-		__entry->xid = be32_to_cpu(rqstp->rq_xid);
-		__entry->vers = rqstp->rq_vers;
-		__entry->proc = rqstp->rq_proc;
-		__assign_sockaddr(server, &xprt->xpt_local, xprt->xpt_locallen);
-		__assign_sockaddr(client, &xprt->xpt_remote, xprt->xpt_remotelen);
-	),
-	TP_printk("xid=0x%08x vers=%u proc=%u",
-		__entry->xid, __entry->vers, __entry->proc
-	)
-);
-
-#define DEFINE_NFSD_XDR_ERR_EVENT(name) \
-DEFINE_EVENT(nfsd_xdr_err_class, nfsd_##name##_err, \
-	TP_PROTO(const struct svc_rqst *rqstp), \
-	TP_ARGS(rqstp))
-
-DEFINE_NFSD_XDR_ERR_EVENT(garbage_args);
-DEFINE_NFSD_XDR_ERR_EVENT(cant_encode);
-
 #define show_nfsd_may_flags(x)						\
 	__print_flags(x, "|",						\
 		{ NFSD_MAY_EXEC,		"EXEC" },		\

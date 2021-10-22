@@ -30,7 +30,7 @@
 #include "netns.h"
 #include "filecache.h"
 
-#include "trace.h"
+#include "xdrtrace.h"
 
 #define NFSDDBG_FACILITY	NFSDDBG_SVC
 
