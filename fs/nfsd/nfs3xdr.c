@@ -783,6 +783,7 @@ nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &args->count) < 0)
 		return false;
 
+	trace_dec_commit3args(rqstp, args);
 	return true;
 }
 
