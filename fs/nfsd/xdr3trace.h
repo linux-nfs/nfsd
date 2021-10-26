@@ -320,6 +320,36 @@ TRACE_EVENT(dec_sattrguard3,
 	)
 );
 
+TRACE_EVENT(dec_write3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_writeargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u32, count)
+		__field(u64, offset)
+		__field(unsigned long, stable)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__entry->count = args->count;
+		__entry->offset = args->offset;
+		__entry->stable = args->stable
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"fh_hash=0x%08x count=%u offset=%llu stable=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __entry->count, __entry->offset,
+		show_nfs_stable_how(__entry->stable)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints

@@ -600,6 +600,7 @@ nfs3svc_decode_writeargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		args->len = max_blocksize;
 	}
 
+	trace_dec_write3args(rqstp, args);
 	return xdr_stream_subsegment(xdr, &args->payload, args->count);
 }
 
