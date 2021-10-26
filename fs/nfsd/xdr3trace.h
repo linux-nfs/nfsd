@@ -228,6 +228,37 @@ TRACE_EVENT(dec_read3args,
 	)
 );
 
+TRACE_EVENT(dec_rename3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_renameargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, from_fh_hash)
+		__string_len(from_name, from_name, args->flen)
+		__field(u32, to_fh_hash)
+		__string_len(to_name, to_name, args->tlen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->from_fh_hash = knfsd_fh_hash(&args->ffh.fh_handle);
+		__assign_str_len(from_name, args->fname, args->flen);
+		__entry->to_fh_hash = knfsd_fh_hash(&args->tfh.fh_handle);
+		__assign_str_len(to_name, args->tname, args->tlen);
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"from_fh_hash=0x%08x from_name=%s "
+		"to_fh_hash=0x%08x to_name=%s",
+		TRACE_XDR_VARARGS,
+		__entry->from_fh_hash, __get_str(from_name),
+		__entry->to_fh_hash, __get_str(to_name)
+	)
+);
+
 TRACE_EVENT(dec_sattr3args,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,

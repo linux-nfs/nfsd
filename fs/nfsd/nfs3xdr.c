@@ -703,10 +703,15 @@ nfs3svc_decode_renameargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_renameargs *args = rqstp->rq_argp;
 
-	return svcxdr_decode_diropargs3(xdr, &args->ffh,
-					&args->fname, &args->flen) &&
-		svcxdr_decode_diropargs3(xdr, &args->tfh,
-					 &args->tname, &args->tlen);
+	if (!svcxdr_decode_diropargs3(xdr, &args->ffh,
+				      &args->fname, &args->flen))
+		return false;
+	if (!svcxdr_decode_diropargs3(xdr, &args->tfh,
+				      &args->tname, &args->tlen))
+		return false;
+
+	trace_dec_rename3args(rqstp, args);
+	return true;
 }
 
 bool
