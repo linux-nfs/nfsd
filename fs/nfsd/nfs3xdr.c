@@ -14,6 +14,8 @@
 #include "netns.h"
 #include "vfs.h"
 
+#include "xdrtrace.h"
+
 /*
  * Force construction of an empty post-op attr
  */

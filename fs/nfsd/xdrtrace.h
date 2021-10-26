@@ -94,6 +94,8 @@ DEFINE_EVENT(svc_xdr_err_class, name, \
 DEFINE_SVC_XDR_ERR_EVENT(nfsd_garbage_args_err);
 DEFINE_SVC_XDR_ERR_EVENT(nfsd_cant_encode_err);
 
+#include "xdr3trace.h"
+
 #endif /* _NFSD_XDR_TRACE_H */
 
 #undef TRACE_INCLUDE_PATH
