@@ -10,6 +10,7 @@
 #include <linux/nfs.h>
 #include <linux/nfs4.h>
 #include <uapi/linux/nfs.h>
+#include <uapi/linux/nfs3.h>
 
 TRACE_DEFINE_ENUM(NFS_OK);
 TRACE_DEFINE_ENUM(NFSERR_PERM);
@@ -89,6 +90,15 @@ TRACE_DEFINE_ENUM(NFS_FILE_SYNC);
 		{ NFS_UNSTABLE,			"UNSTABLE" }, \
 		{ NFS_DATA_SYNC,		"DATA_SYNC" }, \
 		{ NFS_FILE_SYNC,		"FILE_SYNC" })
+
+#define show_nfs3_access_flags(x) \
+	__print_flags(x, "|", \
+		{ NFS3_ACCESS_READ,		"READ" }, \
+		{ NFS3_ACCESS_LOOKUP,		"LOOKUP" }, \
+		{ NFS3_ACCESS_MODIFY,		"MODIFY" }, \
+		{ NFS3_ACCESS_EXTEND,		"EXTEND" }, \
+		{ NFS3_ACCESS_DELETE,		"DELETE" }, \
+		{ NFS3_ACCESS_EXECUTE,		"EXECUTE" })
 
 TRACE_DEFINE_ENUM(NFS4_OK);
 TRACE_DEFINE_ENUM(NFS4ERR_ACCESS);
