@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * XDR tracepoints for lockd
+ *
+ * Author: Chuck Lever <chuck.lever@oracle.com>
+ *
+ * Copyright (c) 2021, Oracle and/or its affiliates.
+ */
+
+#undef TRACE_SYSTEM
+#define TRACE_SYSTEM lockd_xdr
+
+#if !defined(_LOCKD_XDR_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
+#define _LOCKD_XDR_TRACE_H
+
+#include <linux/tracepoint.h>
+
+#include <linux/lockd/nlm.h>
+#include <linux/lockd/xdr.h>
+#include <linux/sunrpc/svc.h>
+#include <linux/sunrpc/svc_xprt.h>
+
+#include <trace/events/fs.h>
+#include <trace/events/nfs.h>
+
+/**
+ ** Helpers
+ **/
+
+TRACE_DEFINE_ENUM(NLM_LCK_GRANTED);
+TRACE_DEFINE_ENUM(NLM_LCK_DENIED);
+TRACE_DEFINE_ENUM(NLM_LCK_DENIED_NOLOCKS);
+TRACE_DEFINE_ENUM(NLM_LCK_BLOCKED);
+TRACE_DEFINE_ENUM(NLM_LCK_DENIED_GRACE_PERIOD);
+#ifdef CONFIG_LOCKD_V4
+TRACE_DEFINE_ENUM(NLM_DEADLCK);
+TRACE_DEFINE_ENUM(NLM_ROFS);
+TRACE_DEFINE_ENUM(NLM_STALE_FH);
+TRACE_DEFINE_ENUM(NLM_FBIG);
+TRACE_DEFINE_ENUM(NLM_FAILED);
+#endif /* CONFIG_LOCKD_V4 */
+
+#ifndef CONFIG_LOCKD_V4
+#define show_nlm_status(x) \
+	__print_symbolic(x, \
+		{ NLM_LCK_GRANTED,		"GRANTED" }, \
+		{ NLM_LCK_DENIED,		"DENIED" }, \
+		{ NLM_LCK_DENIED_NOLOCKS,	"DENIED_NOLOCKS" }, \
+		{ NLM_LCK_BLOCKED,		"BLOCKED" }, \
+		{ NLM_LCK_DENIED_GRACE_PERIOD,	"DENIED_GRACE_PERIOD" })
+#else
+#define show_nlm_status(x) \
+	__print_symbolic(x, \
+		{ NLM_LCK_GRANTED,		"GRANTED" }, \
+		{ NLM_LCK_DENIED,		"DENIED" }, \
+		{ NLM_LCK_DENIED_NOLOCKS,	"DENIED_NOLOCKS" }, \
+		{ NLM_LCK_BLOCKED,		"BLOCKED" }, \
+		{ NLM_LCK_DENIED_GRACE_PERIOD,	"DENIED_GRACE_PERIOD" }, \
+		{ NLM_DEADLCK,			"DEADLCK" }, \
+		{ NLM_ROFS,			"ROFS" }, \
+		{ NLM_STALE_FH,			"STALE_FH" }, \
+		{ NLM_FBIG,			"FBIG" }, \
+		{ NLM_FAILED,			"FAILED" })
+#endif /* CONFIG_LOCKD_V4 */
+
+#define TRACE_SVC_XDR_FIELDS(r) \
+		__field(u32, xid) \
+		__field(u32, program) \
+		__field(u32, version) \
+		__field(u32, procedure) \
+		__string(procname, svc_proc_name(r))
+
+#define TRACE_SVC_XDR_ASSIGNS(r) \
+		do { \
+			__entry->xid = be32_to_cpu((r)->rq_xid); \
+			__entry->program = (r)->rq_prog; \
+			__entry->version = (r)->rq_vers; \
+			__entry->procedure = (r)->rq_proc; \
+			__assign_str(procname, svc_proc_name(r)); \
+		} while (0)
+
+#define TRACE_XDR_FORMAT	"xid=0x%08x %s: "
+
+#define TRACE_XDR_VARARGS	__entry->xid, __get_str(procname)
+
+
+/**
+ ** Event classes
+ **/
+
+
+/**
+ ** Server-side argument decoding tracepoints
+ **/
+
+
+/**
+ ** Server-side result encoding tracepoints
+ **/
+
+
+#endif /* _LOCKD_XDR_TRACE_H */
+
+#undef TRACE_INCLUDE_PATH
+#define TRACE_INCLUDE_PATH ../../fs/lockd
+#define TRACE_INCLUDE_FILE xdrtrace
+
+#include <trace/define_trace.h>

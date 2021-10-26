@@ -20,6 +20,7 @@
 #include <uapi/linux/nfs2.h>
 
 #include "svcxdr.h"
+#include "xdrtrace.h"
 
 
 static inline loff_t
