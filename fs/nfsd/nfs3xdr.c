@@ -498,7 +498,11 @@ nfs3svc_decode_fhandleargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd_fhandle *args = rqstp->rq_argp;
 
-	return svcxdr_decode_nfs_fh3(xdr, &args->fh);
+	if (!svcxdr_decode_nfs_fh3(xdr, &args->fh))
+		return false;
+
+	trace_dec_fhandle3args(rqstp, args);
+	return true;
 }
 
 bool
