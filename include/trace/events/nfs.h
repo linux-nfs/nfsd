@@ -11,6 +11,7 @@
 #include <linux/nfs4.h>
 #include <uapi/linux/nfs.h>
 #include <uapi/linux/nfs3.h>
+#include <uapi/linux/nfsacl.h>
 
 TRACE_DEFINE_ENUM(NFS_OK);
 TRACE_DEFINE_ENUM(NFSERR_PERM);
@@ -99,6 +100,14 @@ TRACE_DEFINE_ENUM(NFS_FILE_SYNC);
 		{ NFS3_ACCESS_EXTEND,		"EXTEND" }, \
 		{ NFS3_ACCESS_DELETE,		"DELETE" }, \
 		{ NFS3_ACCESS_EXECUTE,		"EXECUTE" })
+
+#define show_nfs3_acl_mask(x) \
+	__print_flags(x, "|", \
+		{ NFS_ACL,			"ACL" }, \
+		{ NFS_ACLCNT,			"ACLCNT" }, \
+		{ NFS_DFACL,			"DFACL" }, \
+		{ NFS_DFACLCNT,			"DFACLCNT" }, \
+		{ NFS_ACL_DEFAULT,		"ACL_DEFAULT" })
 
 TRACE_DEFINE_ENUM(NFS4_OK);
 TRACE_DEFINE_ENUM(NFS4ERR_ACCESS);
