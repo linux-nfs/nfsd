@@ -48,6 +48,30 @@ DEFINE_XDR_SERVER_TIME3_EVENT(dec_sattr3_server_mtime);
  ** Server-side argument decoding tracepoints
  **/
 
+TRACE_EVENT(dec_access3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_accessargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(unsigned long, access)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__entry->access = args->access;
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x access=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, show_nfs3_access_flags(__entry->access)
+	)
+);
+
 TRACE_EVENT(dec_dirop3args,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,
