@@ -117,6 +117,32 @@ TRACE_EVENT(dec_fhandle3args,
 	)
 );
 
+TRACE_EVENT(dec_read3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_readargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u32, count)
+		__field(u64, offset)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__entry->count = args->count;
+		__entry->offset = args->offset;
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x count=%u offset=%llu",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __entry->count, __entry->offset
+	)
+);
+
 TRACE_EVENT(dec_sattr3args,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,

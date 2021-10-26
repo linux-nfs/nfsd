@@ -569,6 +569,7 @@ nfs3svc_decode_readargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &args->count) < 0)
 		return false;
 
+	trace_dec_read3args(rqstp, args);
 	return true;
 }
 
