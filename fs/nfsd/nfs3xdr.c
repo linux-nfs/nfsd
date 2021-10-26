@@ -719,9 +719,14 @@ nfs3svc_decode_linkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_linkargs *args = rqstp->rq_argp;
 
-	return svcxdr_decode_nfs_fh3(xdr, &args->ffh) &&
-		svcxdr_decode_diropargs3(xdr, &args->tfh,
-					 &args->tname, &args->tlen);
+	if (!svcxdr_decode_nfs_fh3(xdr, &args->ffh))
+		return false;
+	if (!svcxdr_decode_diropargs3(xdr, &args->tfh,
+				      &args->tname, &args->tlen))
+		return false;
+
+	trace_dec_link3args(rqstp, args);
+	return true;
 }
 
 bool
