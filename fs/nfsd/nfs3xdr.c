@@ -744,6 +744,7 @@ nfs3svc_decode_readdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &args->count) < 0)
 		return false;
 
+	trace_dec_readdir3args(rqstp, args);
 	return true;
 }
 
@@ -766,6 +767,7 @@ nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &args->count) < 0)
 		return false;
 
+	trace_dec_readdir3args(rqstp, args);
 	return true;
 }
 
