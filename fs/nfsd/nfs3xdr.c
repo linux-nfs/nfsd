@@ -536,7 +536,11 @@ nfs3svc_decode_diropargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_diropargs *args = rqstp->rq_argp;
 
-	return svcxdr_decode_diropargs3(xdr, &args->fh, &args->name, &args->len);
+	if (!svcxdr_decode_diropargs3(xdr, &args->fh, &args->name, &args->len))
+		return false;
+
+	trace_dec_dirop3args(rqstp, args);
+	return true;
 }
 
 bool
