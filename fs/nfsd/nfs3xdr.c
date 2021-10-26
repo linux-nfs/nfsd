@@ -805,7 +805,10 @@ nfs3svc_encode_getattrres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		lease_get_mtime(d_inode(resp->fh.fh_dentry), &resp->stat.mtime);
 		if (!svcxdr_encode_fattr3(rqstp, xdr, &resp->fh, &resp->stat))
 			return false;
+		trace_enc_getattr3resok(rqstp, &resp->fh, &resp->stat);
 		break;
+	default:
+		trace_enc_getattr3resfail(rqstp, resp->status);
 	}
 
 	return true;

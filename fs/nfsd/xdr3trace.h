@@ -53,6 +53,97 @@ DEFINE_SVC_XDR_CREATE3ARGS_EVENT(dec_create3args_unchecked);
 DEFINE_SVC_XDR_CREATE3ARGS_EVENT(dec_create3args_guarded);
 DEFINE_SVC_XDR_CREATE3ARGS_EVENT(dec_mkdir3args);
 
+DECLARE_EVENT_CLASS(svc_xdr_fattr3_class,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct svc_fh *fhp,
+		const struct kstat *stat
+	),
+	TP_ARGS(rqstp, fhp, stat),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(unsigned long, type)
+		__field(unsigned int, mode)
+		__field(u32, uid)
+		__field(u32, gid)
+		__field(s64, atime_sec)
+		__field(long, atime_nsec)
+		__field(s64, mtime_sec)
+		__field(long, mtime_nsec)
+		__field(s64, ctime_sec)
+		__field(long, ctime_nsec)
+	),
+	TP_fast_assign(
+		struct user_namespace *userns = nfsd_user_namespace(rqstp);
+
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&fhp->fh_handle);
+		__entry->type = stat->mode & S_IFMT;
+		__entry->mode = stat->mode & S_IALLUGO;
+		__entry->uid = (u32)from_kuid_munged(userns, stat->uid);
+		__entry->gid = (u32)from_kgid_munged(userns, stat->gid);
+		__entry->atime_sec = stat->atime.tv_sec;
+		__entry->atime_nsec = stat->atime.tv_nsec;
+		__entry->mtime_sec = stat->mtime.tv_sec;
+		__entry->mtime_nsec = stat->mtime.tv_nsec;
+		__entry->ctime_sec = stat->ctime.tv_sec;
+		__entry->ctime_nsec = stat->ctime.tv_nsec;
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"fh_hash=0x%08x mtime=[%llx, %lx] ctime=[%llx, %lx] "
+		"type=%s mode=%o uid=%u gid=%u",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash,
+		__entry->mtime_sec, __entry->mtime_nsec,
+		__entry->ctime_sec, __entry->ctime_nsec,
+		show_fs_file_type(__entry->type),
+		__entry->mode, __entry->uid, __entry->gid
+	)
+);
+#define DEFINE_SVC_XDR_FATTR3_EVENT(name) \
+DEFINE_EVENT(svc_xdr_fattr3_class, name, \
+	TP_PROTO( \
+		const struct svc_rqst *rqstp, \
+		const struct svc_fh *fhp, \
+		const struct kstat *stat \
+	), \
+	TP_ARGS(rqstp, fhp, stat))
+
+DEFINE_SVC_XDR_FATTR3_EVENT(enc_getattr3resok);
+
+DECLARE_EVENT_CLASS(svc_xdr_resfail_class,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		__be32 status
+	),
+	TP_ARGS(rqstp, status),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(unsigned long, status)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->status = be32_to_cpu(status);
+	),
+	TP_printk(TRACE_XDR_FORMAT "status=%s",
+		TRACE_XDR_VARARGS, show_nfs_status(__entry->status)
+	)
+);
+#define DEFINE_SVC_XDR_RESFAIL_EVENT(name) \
+DEFINE_EVENT(svc_xdr_resfail_class, name, \
+	TP_PROTO( \
+		const struct svc_rqst *rqstp, \
+		__be32 status \
+	), \
+	TP_ARGS(rqstp, status))
+
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
+
 DECLARE_EVENT_CLASS(svc_xdr_server_time3_class,
 	TP_PROTO(
 		const struct svc_rqst *rqstp
