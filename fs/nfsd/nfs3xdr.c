@@ -1369,10 +1369,12 @@ nfs3svc_encode_fsinfores(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 			return false;
 		if (!svcxdr_encode_fsinfo3resok(xdr, resp))
 			return false;
+		trace_enc_fsinfo3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &nfs3svc_null_fh))
 			return false;
+		trace_enc_fsinfo3resfail(rqstp, resp->status);
 	}
 
 	return true;

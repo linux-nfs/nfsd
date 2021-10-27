@@ -146,6 +146,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_access3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_create3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsinfo3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsstat3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_link3resfail);
@@ -745,6 +746,50 @@ TRACE_EVENT(enc_create3resok,
 	),
 	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x",
 		TRACE_XDR_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(enc_fsinfo3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_fsinfores *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u64, rtmax)
+		__field(u64, rtpref)
+		__field(u64, rtmult)
+		__field(u64, wtmax)
+		__field(u64, wtpref)
+		__field(u64, wtmult)
+		__field(u32, dtpref)
+		__field(u64, maxfilesize)
+		__field(s64, time_delta_sec)
+		__field(long, time_delta_nsec)
+		__field(unsigned long, properties)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->rtmax = resp->f_rtmax;
+		__entry->rtpref = resp->f_rtpref;
+		__entry->rtmult = resp->f_rtmult;
+		__entry->wtmax = resp->f_wtmax;
+		__entry->wtpref = resp->f_wtpref;
+		__entry->wtmult = resp->f_wtmult;
+		__entry->dtpref = resp->f_dtpref;
+		__entry->maxfilesize = resp->f_maxfilesize;
+		__entry->properties = resp->f_properties;
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"rt=%llu/%llu/%llu wt=%llu/%llu/%llu dt=%u maxfile=%llu prop=%s",
+		TRACE_XDR_VARARGS,
+		__entry->rtmax, __entry->rtpref, __entry->rtmult,
+		__entry->wtmax, __entry->wtpref, __entry->wtmult,
+		__entry->dtpref, __entry->maxfilesize,
+		show_nfs3_fsf_properties(__entry->properties)
 	)
 );
 
