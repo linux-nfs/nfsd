@@ -151,6 +151,7 @@ DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsstat3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_link3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_pathconf3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_read3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readdir3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readlink3resfail);
@@ -851,6 +852,37 @@ TRACE_EVENT(enc_lookup3resok,
 	),
 	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x",
 		TRACE_XDR_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(enc_pathconf3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_pathconfres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, linkmax)
+		__field(u32, name_max)
+		__field(bool, no_trunc)
+		__field(bool, chown_restricted)
+		__field(bool, case_insensitive)
+		__field(bool, case_preserving)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->linkmax = resp->p_link_max;
+		__entry->name_max = resp->p_name_max;
+		__entry->no_trunc = !!resp->p_no_trunc;
+		__entry->chown_restricted = !!resp->p_chown_restricted;
+		__entry->case_insensitive = !!resp->p_case_insensitive;
+		__entry->case_preserving = !!resp->p_case_preserving;
+	),
+	TP_printk(TRACE_XDR_FORMAT "linkmax=%u name_max=%u",
+		TRACE_XDR_VARARGS, __entry->linkmax, __entry->name_max
 	)
 );
 

@@ -1413,10 +1413,12 @@ nfs3svc_encode_pathconfres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 			return false;
 		if (!svcxdr_encode_pathconf3resok(xdr, resp))
 			return false;
+		trace_enc_pathconf3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &nfs3svc_null_fh))
 			return false;
+		trace_enc_pathconf3resfail(rqstp, resp->status);
 	}
 
 	return true;
