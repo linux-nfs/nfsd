@@ -468,7 +468,10 @@ svcxdr_encode_post_op_attr(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		goto no_post_op_attr;
 	lease_get_mtime(d_inode(dentry), &stat.mtime);
 
-	return __encode_post_op_attr(rqstp, xdr, fhp, &stat);
+	if (!__encode_post_op_attr(rqstp, xdr, fhp, &stat))
+		return false;
+	trace_enc_post_op_attr(rqstp, fhp, &stat);
+	return true;
 
 no_post_op_attr:
 	return xdr_stream_encode_item_absent(xdr) > 0;

@@ -113,6 +113,7 @@ DEFINE_EVENT(svc_xdr_fattr3_class, name, \
 	TP_ARGS(rqstp, fhp, stat))
 
 DEFINE_SVC_XDR_FATTR3_EVENT(enc_getattr3resok);
+DEFINE_SVC_XDR_FATTR3_EVENT(enc_post_op_attr);
 
 DECLARE_EVENT_CLASS(svc_xdr_resfail_class,
 	TP_PROTO(
