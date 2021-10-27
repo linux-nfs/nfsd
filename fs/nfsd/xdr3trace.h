@@ -147,6 +147,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_access3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readlink3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
 
 DECLARE_EVENT_CLASS(svc_xdr_server_time3_class,
@@ -737,6 +738,27 @@ TRACE_EVENT(enc_lookup3resok,
 	),
 	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x",
 		TRACE_XDR_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(enc_readlink3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_readlinkres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->len = resp->len;
+	),
+	TP_printk(TRACE_XDR_FORMAT "len=%u",
+		TRACE_XDR_VARARGS, __entry->len
 	)
 );
 

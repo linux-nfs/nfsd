@@ -910,10 +910,12 @@ nfs3svc_encode_readlinkres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		xdr_write_pages(xdr, resp->pages, 0, resp->len);
 		if (svc_encode_result_payload(rqstp, head->iov_len, resp->len) < 0)
 			return false;
+		trace_enc_readlink3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
 			return false;
+		trace_enc_readlink3resfail(rqstp, resp->status);
 	}
 
 	return true;
