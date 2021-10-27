@@ -417,7 +417,8 @@ svcxdr_encode_wcc_attr(struct xdr_stream *xdr, const struct svc_fh *fhp)
 }
 
 static bool
-svcxdr_encode_pre_op_attr(struct xdr_stream *xdr, const struct svc_fh *fhp)
+svcxdr_encode_pre_op_attr(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+			  const struct svc_fh *fhp)
 {
 	if (!fhp->fh_pre_saved) {
 		if (xdr_stream_encode_item_absent(xdr) < 0)
@@ -427,7 +428,10 @@ svcxdr_encode_pre_op_attr(struct xdr_stream *xdr, const struct svc_fh *fhp)
 
 	if (xdr_stream_encode_item_present(xdr) < 0)
 		return false;
-	return svcxdr_encode_wcc_attr(xdr, fhp);
+	if (!svcxdr_encode_wcc_attr(xdr, fhp))
+		return false;
+	trace_enc_wcc_data_pre_attr(rqstp, fhp);
+	return true;
 }
 
 static bool
@@ -487,19 +491,25 @@ svcxdr_encode_wcc_data(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 	if (!dentry || !d_really_is_positive(dentry) || !fhp->fh_post_saved)
 		goto neither;
 
-	if (!svcxdr_encode_pre_op_attr(xdr, fhp))
+	if (!svcxdr_encode_pre_op_attr(rqstp, xdr, fhp))
 		return false;
-	return __encode_post_op_attr(rqstp, xdr, fhp, &fhp->fh_post_attr);
+	if (!__encode_post_op_attr(rqstp, xdr, fhp, &fhp->fh_post_attr))
+		return false;
+	trace_enc_wcc_data_post_attr(rqstp, fhp, &fhp->fh_post_attr);
+	return true;
 
 neither:
-	if (!svcxdr_encode_pre_op_attr(xdr, &nfs3svc_null_fh))
+	if (!svcxdr_encode_pre_op_attr(rqstp, xdr, &nfs3svc_null_fh))
 		return false;
 	if (fhp->fh_no_wcc || !dentry || !d_really_is_positive(dentry))
 		goto no_post_op_attr;
 	if (fh_getattr(fhp, &stat) != nfs_ok)
 		goto no_post_op_attr;
 	lease_get_mtime(d_inode(dentry), &stat.mtime);
-	return __encode_post_op_attr(rqstp, xdr, fhp, &stat);
+	if (!__encode_post_op_attr(rqstp, xdr, fhp, &stat))
+		return false;
+	trace_enc_wcc_data_post_attr(rqstp, fhp, &stat);
+	return true;
 
 no_post_op_attr:
 	return xdr_stream_encode_item_absent(xdr) > 0;
@@ -823,8 +833,11 @@ nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_attrstat *resp = rqstp->rq_resp;
 
-	return svcxdr_encode_nfsstat3(xdr, resp->status) &&
-		svcxdr_encode_wcc_data(rqstp, xdr, &resp->fh);
+	if (!svcxdr_encode_nfsstat3(xdr, resp->status))
+		return false;
+	if (resp->status != nfs_ok)
+		trace_enc_wccstat3resfail(rqstp, resp->status);
+	return svcxdr_encode_wcc_data(rqstp, xdr, &resp->fh);
 }
 
 /* LOOKUP */

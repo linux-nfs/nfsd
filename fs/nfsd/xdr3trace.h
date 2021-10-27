@@ -114,6 +114,7 @@ DEFINE_EVENT(svc_xdr_fattr3_class, name, \
 
 DEFINE_SVC_XDR_FATTR3_EVENT(enc_getattr3resok);
 DEFINE_SVC_XDR_FATTR3_EVENT(enc_post_op_attr);
+DEFINE_SVC_XDR_FATTR3_EVENT(enc_wcc_data_post_attr);
 
 DECLARE_EVENT_CLASS(svc_xdr_resfail_class,
 	TP_PROTO(
@@ -144,6 +145,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 	TP_ARGS(rqstp, status))
 
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
 
 DECLARE_EVENT_CLASS(svc_xdr_server_time3_class,
 	TP_PROTO(
@@ -693,4 +695,40 @@ TRACE_EVENT(dec_write3args,
 /**
  ** Server-side result encoding tracepoints
  **/
+
+TRACE_EVENT(enc_wcc_data_pre_attr,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct svc_fh *fhp
+	),
+	TP_ARGS(rqstp, fhp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u64, size)
+		__field(s64, mtime_sec)
+		__field(long, mtime_nsec)
+		__field(s64, ctime_sec)
+		__field(long, ctime_nsec)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&fhp->fh_handle);
+		__entry->size = fhp->fh_pre_size;
+		__entry->mtime_sec = fhp->fh_pre_mtime.tv_sec;
+		__entry->mtime_nsec = fhp->fh_pre_mtime.tv_nsec;
+		__entry->ctime_sec = fhp->fh_pre_ctime.tv_sec;
+		__entry->ctime_nsec = fhp->fh_pre_ctime.tv_nsec;
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x "
+		"mtime=[%llx, %lx] ctime=[%llx, %lx] size=%llu",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash,
+		__entry->mtime_sec, __entry->mtime_nsec,
+		__entry->ctime_sec, __entry->ctime_nsec,
+		__entry->size
+	)
+);
 
