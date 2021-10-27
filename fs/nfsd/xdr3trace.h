@@ -146,6 +146,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_access3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_create3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsstat3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_link3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
@@ -744,6 +745,46 @@ TRACE_EVENT(enc_create3resok,
 	),
 	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x",
 		TRACE_XDR_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(enc_fsstat3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_fsstatres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u64, tbytes)
+		__field(u64, fbytes)
+		__field(u64, abytes)
+		__field(u64, tfiles)
+		__field(u64, ffiles)
+		__field(u64, afiles)
+		__field(u32, invarsec)
+	),
+	TP_fast_assign(
+		const struct kstatfs *s = &resp->stats;
+		u64 bs = s->f_bsize;
+
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->tbytes = bs * s->f_blocks;
+		__entry->fbytes = bs * s->f_bfree;
+		__entry->abytes = bs * s->f_bavail;
+		__entry->tfiles = s->f_files;
+		__entry->ffiles = s->f_ffree;
+		__entry->afiles = s->f_ffree;
+		__entry->invarsec = resp->invarsec;
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"bytes=%llu/%llu/%llu files=%llu/%llu/%llu invarsec=%u",
+		TRACE_XDR_VARARGS,
+		__entry->tbytes, __entry->fbytes, __entry->abytes,
+		__entry->tfiles, __entry->ffiles, __entry->afiles,
+		__entry->invarsec
 	)
 );
 
