@@ -150,6 +150,7 @@ DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_read3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readlink3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_write3resfail);
 
 DECLARE_EVENT_CLASS(svc_xdr_server_time3_class,
 	TP_PROTO(
@@ -820,6 +821,34 @@ TRACE_EVENT(enc_wcc_data_pre_attr,
 		__entry->mtime_sec, __entry->mtime_nsec,
 		__entry->ctime_sec, __entry->ctime_nsec,
 		__entry->size
+	)
+);
+
+TRACE_EVENT(enc_write3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_writeres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, count)
+		__field(unsigned long, committed)
+		__array(u8, writeverf, NFS3_WRITEVERFSIZE)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->count = resp->count;
+		__entry->committed = resp->committed;
+		memcpy(__entry->writeverf, resp->verf, NFS3_WRITEVERFSIZE);
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"count=%u committed=%s writeverf=%s",
+		TRACE_XDR_VARARGS,
+		__entry->count, show_nfs_stable_how(__entry->committed),
+		__print_hex(__entry->writeverf, NFS3_WRITEVERFSIZE)
 	)
 );
 
