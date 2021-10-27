@@ -1000,10 +1000,12 @@ nfs3svc_encode_createres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 			return false;
 		if (!svcxdr_encode_wcc_data(rqstp, xdr, &resp->dirfh))
 			return false;
+		trace_enc_create3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_wcc_data(rqstp, xdr, &resp->dirfh))
 			return false;
+		trace_enc_create3resfail(rqstp, resp->status);
 	}
 
 	return true;

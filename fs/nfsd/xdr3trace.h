@@ -145,6 +145,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 	TP_ARGS(rqstp, status))
 
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_access3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_create3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_read3resfail);
@@ -719,6 +720,27 @@ TRACE_EVENT(enc_access3resok,
 	),
 	TP_printk(TRACE_XDR_FORMAT "access=%s",
 		TRACE_XDR_VARARGS, show_nfs3_access_flags(__entry->access)
+	)
+);
+
+TRACE_EVENT(enc_create3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_diropres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&resp->fh.fh_handle);
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x",
+		TRACE_XDR_VARARGS, __entry->fh_hash
 	)
 );
 
