@@ -21,6 +21,7 @@
  */
 static const struct svc_fh nfs3svc_null_fh = {
 	.fh_no_wcc	= true,
+	.fh_pre_saved	= false,
 };
 
 /*
@@ -468,9 +469,6 @@ no_post_op_attrs:
 	return xdr_stream_encode_item_absent(xdr) > 0;
 }
 
-/*
- * Encode weak cache consistency data
- */
 static bool
 svcxdr_encode_wcc_data(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		       const struct svc_fh *fhp)
@@ -480,11 +478,8 @@ svcxdr_encode_wcc_data(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 	if (!dentry || !d_really_is_positive(dentry) || !fhp->fh_post_saved)
 		goto neither;
 
-	/* before */
 	if (!svcxdr_encode_pre_op_attr(xdr, fhp))
 		return false;
-
-	/* after */
 	if (xdr_stream_encode_item_present(xdr) < 0)
 		return false;
 	if (!svcxdr_encode_fattr3(rqstp, xdr, fhp, &fhp->fh_post_attr))
@@ -493,7 +488,7 @@ svcxdr_encode_wcc_data(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 	return true;
 
 neither:
-	if (xdr_stream_encode_item_absent(xdr) < 0)
+	if (!svcxdr_encode_pre_op_attr(xdr, &nfs3svc_null_fh))
 		return false;
 	if (!svcxdr_encode_post_op_attr(rqstp, xdr, fhp))
 		return false;
