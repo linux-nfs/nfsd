@@ -430,6 +430,15 @@ svcxdr_encode_pre_op_attr(struct xdr_stream *xdr, const struct svc_fh *fhp)
 	return svcxdr_encode_wcc_attr(xdr, fhp);
 }
 
+static bool
+__encode_post_op_attr(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+		      const struct svc_fh *fhp, const struct kstat *stat)
+{
+	if (xdr_stream_encode_item_present(xdr) < 0)
+		return false;
+	return svcxdr_encode_fattr3(rqstp, xdr, fhp, stat);
+}
+
 /**
  * svcxdr_encode_post_op_attr - Encode NFSv3 post-op attributes
  * @rqstp: Context of a completed RPC transaction
@@ -453,19 +462,15 @@ svcxdr_encode_post_op_attr(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 	 * returned.
 	 */
 	if (fhp->fh_no_wcc || !dentry || !d_really_is_positive(dentry))
-		goto no_post_op_attrs;
+		goto no_post_op_attr;
+
 	if (fh_getattr(fhp, &stat) != nfs_ok)
-		goto no_post_op_attrs;
-
-	if (xdr_stream_encode_item_present(xdr) < 0)
-		return false;
+		goto no_post_op_attr;
 	lease_get_mtime(d_inode(dentry), &stat.mtime);
-	if (!svcxdr_encode_fattr3(rqstp, xdr, fhp, &stat))
-		return false;
 
-	return true;
+	return __encode_post_op_attr(rqstp, xdr, fhp, &stat);
 
-no_post_op_attrs:
+no_post_op_attr:
 	return xdr_stream_encode_item_absent(xdr) > 0;
 }
 
@@ -474,26 +479,27 @@ svcxdr_encode_wcc_data(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		       const struct svc_fh *fhp)
 {
 	struct dentry *dentry = fhp->fh_dentry;
+	struct kstat stat;
 
 	if (!dentry || !d_really_is_positive(dentry) || !fhp->fh_post_saved)
 		goto neither;
 
 	if (!svcxdr_encode_pre_op_attr(xdr, fhp))
 		return false;
-	if (xdr_stream_encode_item_present(xdr) < 0)
-		return false;
-	if (!svcxdr_encode_fattr3(rqstp, xdr, fhp, &fhp->fh_post_attr))
-		return false;
-
-	return true;
+	return __encode_post_op_attr(rqstp, xdr, fhp, &fhp->fh_post_attr);
 
 neither:
 	if (!svcxdr_encode_pre_op_attr(xdr, &nfs3svc_null_fh))
 		return false;
-	if (!svcxdr_encode_post_op_attr(rqstp, xdr, fhp))
-		return false;
+	if (fhp->fh_no_wcc || !dentry || !d_really_is_positive(dentry))
+		goto no_post_op_attr;
+	if (fh_getattr(fhp, &stat) != nfs_ok)
+		goto no_post_op_attr;
+	lease_get_mtime(d_inode(dentry), &stat.mtime);
+	return __encode_post_op_attr(rqstp, xdr, fhp, &stat);
 
-	return true;
+no_post_op_attr:
+	return xdr_stream_encode_item_absent(xdr) > 0;
 }
 
 /*
