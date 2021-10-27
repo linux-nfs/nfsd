@@ -144,6 +144,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 	), \
 	TP_ARGS(rqstp, status))
 
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_access3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
@@ -696,6 +697,27 @@ TRACE_EVENT(dec_write3args,
 /**
  ** Server-side result encoding tracepoints
  **/
+
+TRACE_EVENT(enc_access3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_accessres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(unsigned long, access)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->access = resp->access;
+	),
+	TP_printk(TRACE_XDR_FORMAT "access=%s",
+		TRACE_XDR_VARARGS, show_nfs3_access_flags(__entry->access)
+	)
+);
 
 TRACE_EVENT(enc_lookup3resok,
 	TP_PROTO(

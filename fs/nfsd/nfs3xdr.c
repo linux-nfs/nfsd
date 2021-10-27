@@ -881,10 +881,12 @@ nfs3svc_encode_accessres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 			return false;
 		if (xdr_stream_encode_u32(xdr, resp->access) < 0)
 			return false;
+		trace_enc_access3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
 			return false;
+		trace_enc_access3resfail(rqstp, resp->status);
 	}
 
 	return true;
