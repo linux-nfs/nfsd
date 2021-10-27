@@ -856,10 +856,12 @@ nfs3svc_encode_lookupres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 			return false;
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->dirfh))
 			return false;
+		trace_enc_lookup3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->dirfh))
 			return false;
+		trace_enc_lookup3resfail(rqstp, resp->status);
 	}
 
 	return true;
