@@ -381,6 +381,33 @@ TRACE_EVENT(dec_sattrguard3,
 	)
 );
 
+TRACE_EVENT(dec_symlink3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_symlinkargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u32, symlink_len)
+		__string_len(symlink_name, symlink_name, args->flen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->ffh.fh_handle);
+		__entry->symlink_len = args->tlen;
+		__assign_str_len(symlink_name, args->fname, args->flen);
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"fh_hash=0x%08x symlink_name=%s symlink_len=%u",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __get_str(symlink_name), __entry->symlink_len
+	)
+);
+
 TRACE_EVENT(dec_write3args,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,

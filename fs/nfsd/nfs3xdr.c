@@ -662,6 +662,8 @@ nfs3svc_decode_symlinkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	/* symlink_data */
 	args->first.iov_len = head->iov_len - xdr_stream_pos(xdr);
 	args->first.iov_base = xdr_inline_decode(xdr, args->tlen);
+
+	trace_dec_symlink3args(rqstp, args);
 	return args->first.iov_base != NULL;
 }
 
