@@ -325,7 +325,8 @@ svcxdr_decode_sattrguard3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 }
 
 static bool
-svcxdr_decode_specdata3(struct xdr_stream *xdr, struct nfsd3_mknodargs *args)
+svcxdr_decode_specdata3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+			struct nfsd3_mknodargs *args)
 {
 	__be32 *p;
 
@@ -335,6 +336,7 @@ svcxdr_decode_specdata3(struct xdr_stream *xdr, struct nfsd3_mknodargs *args)
 	args->major = be32_to_cpup(p++);
 	args->minor = be32_to_cpup(p);
 
+	trace_dec_specdata3(rqstp, args);
 	return true;
 }
 
@@ -343,7 +345,7 @@ svcxdr_decode_devicedata3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 			  struct nfsd3_mknodargs *args)
 {
 	return svcxdr_decode_sattr3(rqstp, xdr, &args->attrs) &&
-		svcxdr_decode_specdata3(xdr, args);
+		svcxdr_decode_specdata3(rqstp, xdr, args);
 }
 
 static bool
@@ -692,6 +694,7 @@ nfs3svc_decode_mknodargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	}
 
+	trace_dec_mknod3args(rqstp, args);
 	return true;
 }
 

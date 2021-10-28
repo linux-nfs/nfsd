@@ -178,6 +178,30 @@ TRACE_EVENT(dec_fhandle3args,
 	)
 );
 
+TRACE_EVENT(dec_mknod3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_mknodargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__string_len(name, name, args->len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__assign_str_len(name, args->name, args->len);
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x name=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __get_str(name)
+	)
+);
+
 TRACE_EVENT(dec_read3args,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,
@@ -378,6 +402,30 @@ TRACE_EVENT(dec_sattrguard3,
 	TP_printk(TRACE_XDR_FORMAT "obj_ctime=[%llx, %lx]",
 		TRACE_XDR_VARARGS,
 		__entry->obj_ctime_sec, __entry->obj_ctime_nsec
+	)
+);
+
+TRACE_EVENT(dec_specdata3,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_mknodargs *args
+
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, major)
+		__field(u32, minor)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->major = args->major;
+		__entry->minor = args->minor;
+	),
+	TP_printk(TRACE_XDR_FORMAT "rdev=(%u, %u)",
+		TRACE_XDR_VARARGS, __entry->major, __entry->minor
 	)
 );
 
