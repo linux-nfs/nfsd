@@ -18,6 +18,41 @@
  ** Event classes
  **/
 
+DECLARE_EVENT_CLASS(svc_xdr_create3args_class,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_createargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__string_len(name, name, args->len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__assign_str_len(name, args->name, args->len);
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x name=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __get_str(name)
+	)
+);
+#define DEFINE_SVC_XDR_CREATE3ARGS_EVENT(name) \
+DEFINE_EVENT(svc_xdr_create3args_class, name, \
+	TP_PROTO( \
+		const struct svc_rqst *rqstp, \
+		const struct nfsd3_createargs *args \
+	), \
+	TP_ARGS(rqstp, args))
+
+DEFINE_SVC_XDR_CREATE3ARGS_EVENT(dec_create3args_unchecked);
+DEFINE_SVC_XDR_CREATE3ARGS_EVENT(dec_create3args_guarded);
+DEFINE_SVC_XDR_CREATE3ARGS_EVENT(dec_mkdir3args);
+
 DECLARE_EVENT_CLASS(svc_xdr_server_time3_class,
 	TP_PROTO(
 		const struct svc_rqst *rqstp
@@ -69,6 +104,32 @@ TRACE_EVENT(dec_access3args,
 	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x access=%s",
 		TRACE_XDR_VARARGS,
 		__entry->fh_hash, show_nfs3_access_flags(__entry->access)
+	)
+);
+
+TRACE_EVENT(dec_create3args_exclusive,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_createargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__array(u8, createverf, NFS3_CREATEVERFSIZE)
+		__string_len(name, name, args->len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		memcpy(__entry->createverf, args->verf, NFS3_CREATEVERFSIZE);
+		__assign_str_len(name, args->name, args->len);
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x name=%s createverf=%s",
+		TRACE_XDR_VARARGS, __entry->fh_hash, __get_str(name),
+		__print_hex(__entry->createverf, NFS3_CREATEVERFSIZE)
 	)
 );
 

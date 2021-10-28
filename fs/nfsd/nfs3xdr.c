@@ -615,12 +615,16 @@ nfs3svc_decode_createargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	switch (args->createmode) {
 	case NFS3_CREATE_UNCHECKED:
+		trace_dec_create3args_unchecked(rqstp, args);
+		return svcxdr_decode_sattr3(rqstp, xdr, &args->attrs);
 	case NFS3_CREATE_GUARDED:
+		trace_dec_create3args_guarded(rqstp, args);
 		return svcxdr_decode_sattr3(rqstp, xdr, &args->attrs);
 	case NFS3_CREATE_EXCLUSIVE:
 		args->verf = xdr_inline_decode(xdr, NFS3_CREATEVERFSIZE);
 		if (!args->verf)
 			return false;
+		trace_dec_create3args_exclusive(rqstp, args);
 		break;
 	default:
 		return false;
@@ -633,9 +637,13 @@ nfs3svc_decode_mkdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_createargs *args = rqstp->rq_argp;
 
-	return svcxdr_decode_diropargs3(xdr, &args->fh,
-					&args->name, &args->len) &&
-		svcxdr_decode_sattr3(rqstp, xdr, &args->attrs);
+	if (!svcxdr_decode_diropargs3(xdr, &args->fh, &args->name, &args->len))
+		return false;
+	if (!svcxdr_decode_sattr3(rqstp, xdr, &args->attrs))
+		return false;
+
+	trace_dec_mkdir3args(rqstp, args);
+	return true;
 }
 
 bool
