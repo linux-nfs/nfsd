@@ -225,6 +225,7 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 			return false;
 		iap->ia_valid |= ATTR_MODE;
 		iap->ia_mode = mode;
+		trace_dec_sattr3_mode(rqstp, iap);
 	}
 	if (xdr_stream_decode_bool(xdr, &set_it) < 0)
 		return false;
@@ -236,6 +237,7 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		iap->ia_uid = make_kuid(nfsd_user_namespace(rqstp), uid);
 		if (uid_valid(iap->ia_uid))
 			iap->ia_valid |= ATTR_UID;
+		trace_dec_sattr3_uid(rqstp, iap);
 	}
 	if (xdr_stream_decode_bool(xdr, &set_it) < 0)
 		return false;
@@ -247,6 +249,7 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		iap->ia_gid = make_kgid(nfsd_user_namespace(rqstp), gid);
 		if (gid_valid(iap->ia_gid))
 			iap->ia_valid |= ATTR_GID;
+		trace_dec_sattr3_gid(rqstp, iap);
 	}
 	if (xdr_stream_decode_bool(xdr, &set_it) < 0)
 		return false;
@@ -257,6 +260,7 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 			return false;
 		iap->ia_valid |= ATTR_SIZE;
 		iap->ia_size = newsize;
+		trace_dec_sattr3_size(rqstp, iap);
 	}
 	if (xdr_stream_decode_u32(xdr, &set_it) < 0)
 		return false;
@@ -265,11 +269,13 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		break;
 	case SET_TO_SERVER_TIME:
 		iap->ia_valid |= ATTR_ATIME;
+		trace_dec_sattr3_server_atime(rqstp);
 		break;
 	case SET_TO_CLIENT_TIME:
 		if (!svcxdr_decode_nfstime3(xdr, &iap->ia_atime))
 			return false;
 		iap->ia_valid |= ATTR_ATIME | ATTR_ATIME_SET;
+		trace_dec_sattr3_atime(rqstp, iap);
 		break;
 	default:
 		return false;
@@ -281,11 +287,13 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 		break;
 	case SET_TO_SERVER_TIME:
 		iap->ia_valid |= ATTR_MTIME;
+		trace_dec_sattr3_server_mtime(rqstp);
 		break;
 	case SET_TO_CLIENT_TIME:
 		if (!svcxdr_decode_nfstime3(xdr, &iap->ia_mtime))
 			return false;
 		iap->ia_valid |= ATTR_MTIME | ATTR_MTIME_SET;
+		trace_dec_sattr3_mtime(rqstp, iap);
 		break;
 	default:
 		return false;
@@ -295,7 +303,8 @@ svcxdr_decode_sattr3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 }
 
 static bool
-svcxdr_decode_sattrguard3(struct xdr_stream *xdr, struct nfsd3_sattrargs *args)
+svcxdr_decode_sattrguard3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+			  struct nfsd3_sattrargs *args)
 {
 	__be32 *p;
 	u32 check;
@@ -308,6 +317,7 @@ svcxdr_decode_sattrguard3(struct xdr_stream *xdr, struct nfsd3_sattrargs *args)
 			return false;
 		args->check_guard = 1;
 		args->guardtime = be32_to_cpup(p);
+		trace_dec_sattrguard3(rqstp, args->guardtime);
 	} else
 		args->check_guard = 0;
 
@@ -510,9 +520,15 @@ nfs3svc_decode_sattrargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_sattrargs *args = rqstp->rq_argp;
 
-	return svcxdr_decode_nfs_fh3(xdr, &args->fh) &&
-		svcxdr_decode_sattr3(rqstp, xdr, &args->attrs) &&
-		svcxdr_decode_sattrguard3(xdr, args);
+	if (!svcxdr_decode_nfs_fh3(xdr, &args->fh))
+		return false;
+	if (!svcxdr_decode_sattr3(rqstp, xdr, &args->attrs))
+		return false;
+	if (!svcxdr_decode_sattrguard3(rqstp, xdr, args))
+		return false;
+
+	trace_dec_sattr3args(rqstp, args);
+	return true;
 }
 
 bool
