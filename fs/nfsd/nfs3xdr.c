@@ -1068,10 +1068,12 @@ nfs3svc_encode_readdirres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 			return false;
 		if (xdr_stream_encode_bool(xdr, resp->common.err == nfserr_eof) < 0)
 			return false;
+		trace_enc_readdir3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
 			return false;
+		trace_enc_readdir3resfail(rqstp, resp->status);
 	}
 
 	return true;
@@ -1190,6 +1192,7 @@ int nfs3svc_encode_entry3(void *data, const char *name, int namlen,
 	if (!svcxdr_encode_entry3_common(resp, name, namlen, offset, ino))
 		goto out_toosmall;
 
+	trace_enc_entry3(resp->rqstp, ino, name, namlen);
 	xdr_commit_encode(&resp->xdr);
 	resp->common.err = nfs_ok;
 	return 0;
@@ -1218,6 +1221,8 @@ svcxdr_encode_entry3_plus(struct nfsd3_readdirres *resp, const char *name,
 		goto out;
 	if (!svcxdr_encode_post_op_fh3(xdr, fhp))
 		goto out;
+
+	trace_enc_entry3plus(resp->rqstp, fhp, ino, name, namlen);
 	result = true;
 
 out:
@@ -1229,6 +1234,8 @@ out_noattrs:
 		return false;
 	if (xdr_stream_encode_item_absent(xdr) < 0)
 		return false;
+
+	trace_enc_entry3(resp->rqstp, ino, name, namlen);
 	return true;
 }
 

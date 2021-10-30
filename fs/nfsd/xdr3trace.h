@@ -150,6 +150,7 @@ DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_link3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_read3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readdir3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readlink3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_rename3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
@@ -788,6 +789,82 @@ TRACE_EVENT(enc_read3resok,
 	TP_printk(TRACE_XDR_FORMAT "count=%u%s",
 		TRACE_XDR_VARARGS,
 		__entry->count, __entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_readdir3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_readdirres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, len)
+		__field(bool, eof)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->len = resp->dirlist.len;
+		__entry->eof = resp->common.err == nfserr_eof;
+	),
+	TP_printk(TRACE_XDR_FORMAT "len=%u%s",
+		TRACE_XDR_VARARGS,
+		__entry->len, __entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_entry3,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		 u64 ino,
+		 const char *name,
+		 int len),
+	TP_ARGS(rqstp, ino, name, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u64, ino)
+		__string_len(name, name, len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->ino = ino;
+		__assign_str_len(name, name, len)
+	),
+	TP_printk(TRACE_XDR_FORMAT "ino=%llu name=%s",
+		TRACE_XDR_VARARGS, __entry->ino, __get_str(name)
+	)
+);
+
+TRACE_EVENT(enc_entry3plus,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct svc_fh *fhp,
+		 u64 ino,
+		 const char *name,
+		 int len),
+	TP_ARGS(rqstp, fhp, ino, name, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u64, ino)
+		__string_len(name, name, len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&fhp->fh_handle);
+		__entry->ino = ino;
+		__assign_str_len(name, name, len)
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x ino=%llu name=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __entry->ino, __get_str(name)
 	)
 );
 
