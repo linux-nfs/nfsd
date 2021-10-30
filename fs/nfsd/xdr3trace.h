@@ -145,6 +145,7 @@ DEFINE_EVENT(svc_xdr_resfail_class, name, \
 	TP_ARGS(rqstp, status))
 
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_access3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_commit3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_create3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsinfo3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsstat3resfail);
@@ -726,6 +727,28 @@ TRACE_EVENT(enc_access3resok,
 	),
 	TP_printk(TRACE_XDR_FORMAT "access=%s",
 		TRACE_XDR_VARARGS, show_nfs3_access_flags(__entry->access)
+	)
+);
+
+TRACE_EVENT(enc_commit3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_commitres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__array(u8, writeverf, NFS3_WRITEVERFSIZE)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		memcpy(__entry->writeverf, resp->verf, NFS3_WRITEVERFSIZE);
+	),
+	TP_printk(TRACE_XDR_FORMAT "writeverf=%s",
+		TRACE_XDR_VARARGS,
+		__print_hex(__entry->writeverf, NFS3_WRITEVERFSIZE)
 	)
 );
 
