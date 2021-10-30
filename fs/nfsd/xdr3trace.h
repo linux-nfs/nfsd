@@ -150,6 +150,7 @@ DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_read3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readlink3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_rename3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_write3resfail);
 

@@ -1017,9 +1017,16 @@ nfs3svc_encode_renameres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_renameres *resp = rqstp->rq_resp;
 
-	return svcxdr_encode_nfsstat3(xdr, resp->status) &&
-		svcxdr_encode_wcc_data(rqstp, xdr, &resp->ffh) &&
-		svcxdr_encode_wcc_data(rqstp, xdr, &resp->tfh);
+	if (!svcxdr_encode_nfsstat3(xdr, resp->status))
+		return false;
+	if (!svcxdr_encode_wcc_data(rqstp, xdr, &resp->ffh))
+		return false;
+	if (!svcxdr_encode_wcc_data(rqstp, xdr, &resp->tfh))
+		return false;
+
+	if (resp->status != nfs_ok)
+		trace_enc_rename3resfail(rqstp, resp->status);
+	return true;
 }
 
 /* LINK */
