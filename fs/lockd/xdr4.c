@@ -156,6 +156,7 @@ nlm4svc_decode_testargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (exclusive)
 		argp->lock.fl.fl_type = F_WRLCK;
 
+	trace_dec_testargs(rqstp, argp);
 	return true;
 }
 
