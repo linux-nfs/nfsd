@@ -88,6 +88,26 @@ TRACE_DEFINE_ENUM(NLM_FAILED);
  ** Event classes
  **/
 
+DECLARE_EVENT_CLASS(svc_xdr_void_class,
+	TP_PROTO(
+		const struct svc_rqst *rqstp
+	),
+	TP_ARGS(rqstp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+	),
+	TP_printk(TRACE_XDR_FORMAT, TRACE_XDR_VARARGS)
+);
+#define DEFINE_SVC_XDR_VOID_EVENT(name) \
+DEFINE_EVENT(svc_xdr_void_class, name, \
+	TP_PROTO(const struct svc_rqst *rqstp), \
+	TP_ARGS(rqstp))
+
+DEFINE_SVC_XDR_VOID_EVENT(dec_nlm_voidargs);
+
 
 /**
  ** Server-side argument decoding tracepoints

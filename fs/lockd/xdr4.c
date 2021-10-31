@@ -134,6 +134,7 @@ svcxdr_encode_testrply(struct xdr_stream *xdr, const struct nlm_res *resp)
 bool
 nlm4svc_decode_void(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
+	trace_dec_nlm_voidargs(rqstp);
 	return true;
 }
 
