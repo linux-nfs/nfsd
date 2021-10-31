@@ -113,6 +113,33 @@ DEFINE_SVC_XDR_VOID_EVENT(dec_nlm_voidargs);
  ** Server-side argument decoding tracepoints
  **/
 
+TRACE_EVENT(dec_cancargs,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_args *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, cookie_hash)
+		__field(bool, block)
+		__field(bool, exclusive)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->cookie_hash = nfs_cookie_hash(&args->cookie);
+		__entry->exclusive = (args->lock.fl.fl_type == F_WRLCK);
+		__entry->block = args->block;
+	),
+	TP_printk(TRACE_XDR_FORMAT "cookie_hash=0x%08x%s block=%s",
+		TRACE_XDR_VARARGS, __entry->cookie_hash,
+		__entry->exclusive ? " (exclusive)" : "",
+		__entry->block ? "yes" : "no"
+	)
+);
+
 TRACE_EVENT(dec_lockargs,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,

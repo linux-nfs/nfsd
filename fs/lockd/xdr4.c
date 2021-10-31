@@ -203,6 +203,7 @@ nlm4svc_decode_cancargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (exclusive)
 		argp->lock.fl.fl_type = F_WRLCK;
 
+	trace_dec_cancargs(rqstp, argp);
 	return true;
 }
 
