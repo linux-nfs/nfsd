@@ -233,6 +233,29 @@ TRACE_EVENT(dec_nlm_lock_arg,
 	)
 );
 
+TRACE_EVENT(dec_rebootargs,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_reboot *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, nsm_state)
+		__string_len(mon, mon, args->len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->nsm_state = args->state;
+		__assign_str_len(mon, args->mon, args->len);
+	),
+	TP_printk(TRACE_XDR_FORMAT "nsm_state=%u mon=%s",
+		TRACE_XDR_VARARGS, __entry->nsm_state, __get_str(mon)
+	)
+);
+
 TRACE_EVENT(dec_testargs,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,

@@ -273,6 +273,7 @@ nlmsvc_decode_reboot(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	memcpy(&argp->priv.data, p, sizeof(argp->priv.data));
 
+	trace_dec_rebootargs(rqstp, argp);
 	return true;
 }
 
