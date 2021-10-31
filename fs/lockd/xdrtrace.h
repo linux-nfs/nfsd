@@ -63,6 +63,20 @@ TRACE_DEFINE_ENUM(NLM_FAILED);
 		{ NLM_FAILED,			"FAILED" })
 #endif /* CONFIG_LOCKD_V4 */
 
+#define show_nlm_deny_mode(x) \
+	__print_symbolic(x, \
+		{ 0,				"NONE" }, \
+		{ 1,				"READ" }, \
+		{ 2,				"WRITE" }, \
+		{ 3,				"READ/WRITE" })
+
+#define show_nlm_share_access(x) \
+	__print_symbolic(x, \
+		{ 0,				"NONE" }, \
+		{ 1,				"RO" }, \
+		{ 2,				"WO" }, \
+		{ 3,				"RW" })
+
 #define TRACE_SVC_XDR_FIELDS(r) \
 		__field(u32, xid) \
 		__field(u32, program) \
@@ -253,6 +267,43 @@ TRACE_EVENT(dec_rebootargs,
 	),
 	TP_printk(TRACE_XDR_FORMAT "nsm_state=%u mon=%s",
 		TRACE_XDR_VARARGS, __entry->nsm_state, __get_str(mon)
+	)
+);
+
+TRACE_EVENT(dec_shareargs,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_args *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, cookie_hash)
+		__field(u32, fh_hash)
+		__field(unsigned long, mode)
+		__field(unsigned long, access)
+		__string_len(caller, caller, args->lock.len)
+		__string_len(owner, owner, args->lock.oh.len)
+	),
+	TP_fast_assign(
+		const struct nlm_lock *lock = &args->lock;
+
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->cookie_hash = nfs_cookie_hash(&args->cookie);
+		__entry->fh_hash = nfs_fhandle_hash(&lock->fh);
+		__entry->mode = args->fsm_mode;
+		__entry->access = args->fsm_access;
+		__assign_str_len(caller, lock->caller, lock->len);
+		__assign_str_len(owner, lock->oh.data, lock->oh.len);
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"cookie_hash=0x%08x fh_hash=0x%08x mode=%s access=%s",
+		TRACE_XDR_VARARGS,
+		__entry->cookie_hash, __entry->fh_hash,
+		show_nlm_deny_mode(__entry->mode),
+		show_nlm_share_access(__entry->access)
 	)
 );
 

@@ -301,6 +301,7 @@ nlmsvc_decode_shareargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &argp->fsm_access) < 0)
 		return false;
 
+	trace_dec_shareargs(rqstp, argp);
 	return true;
 }
 
