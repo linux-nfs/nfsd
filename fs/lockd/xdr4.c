@@ -182,6 +182,7 @@ nlm4svc_decode_lockargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	argp->monitor = 1;		/* monitor client by default */
 
+	trace_dec_lockargs(rqstp, argp);
 	return true;
 }
 
