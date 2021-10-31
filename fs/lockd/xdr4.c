@@ -302,6 +302,7 @@ nlm4svc_decode_notify(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &argp->state) < 0)
 		return false;
 
+	trace_dec_notifyargs(rqstp, argp);
 	return true;
 }
 
