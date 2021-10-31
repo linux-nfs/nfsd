@@ -121,6 +121,7 @@ DEFINE_EVENT(svc_xdr_void_class, name, \
 	TP_ARGS(rqstp))
 
 DEFINE_SVC_XDR_VOID_EVENT(dec_nlm_voidargs);
+DEFINE_SVC_XDR_VOID_EVENT(enc_nlm_voidres);
 
 
 /**

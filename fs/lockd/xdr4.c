@@ -314,6 +314,7 @@ nlm4svc_decode_notify(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 bool
 nlm4svc_encode_void(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
+	trace_enc_nlm_voidres(rqstp);
 	return true;
 }
 
