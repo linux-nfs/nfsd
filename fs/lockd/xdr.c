@@ -232,6 +232,7 @@ nlmsvc_decode_unlockargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	argp->lock.fl.fl_type = F_UNLCK;
 
+	trace_dec_unlockargs(rqstp, argp);
 	return true;
 }
 

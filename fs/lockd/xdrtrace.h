@@ -233,6 +233,27 @@ TRACE_EVENT(dec_testargs,
 	)
 );
 
+TRACE_EVENT(dec_unlockargs,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_args *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, cookie_hash)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->cookie_hash = nfs_cookie_hash(&args->cookie);
+	),
+	TP_printk(TRACE_XDR_FORMAT "cookie_hash=0x%08x",
+		TRACE_XDR_VARARGS, __entry->cookie_hash
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
