@@ -338,8 +338,13 @@ nlm4svc_encode_res(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nlm_res *resp = rqstp->rq_resp;
 
-	return svcxdr_encode_cookie(xdr, &resp->cookie) &&
-		svcxdr_encode_stats(xdr, resp->status);
+	if (!svcxdr_encode_cookie(xdr, &resp->cookie))
+		return false;
+	if (!svcxdr_encode_stats(xdr, resp->status))
+		return false;
+
+	trace_enc_statres(rqstp, resp);
+	return true;
 }
 
 bool
@@ -355,5 +360,6 @@ nlm4svc_encode_shareres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_encode_u32(xdr, 0) < 0)
 		return false;
 
+	trace_enc_statres(rqstp, resp);
 	return true;
 }
