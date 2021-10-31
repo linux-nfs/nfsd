@@ -12,6 +12,7 @@
 #include "cache.h"
 #include "xdr3.h"
 #include "vfs.h"
+#include "xdrtrace.h"
 
 /*
  * NULL call.
@@ -137,6 +138,7 @@ nfs3svc_decode_getaclargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &args->mask) < 0)
 		return false;
 
+	trace_dec_getacl3args(rqstp, args);
 	return true;
 }
 
@@ -158,6 +160,7 @@ nfs3svc_decode_setaclargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 				   &argp->acl_default : NULL))
 		return false;
 
+	trace_dec_setacl3args(rqstp, argp);
 	return true;
 }
 
@@ -208,10 +211,12 @@ nfs3svc_encode_getaclres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 					  NFS_ACL_DEFAULT);
 		if (n <= 0)
 			return false;
+		trace_enc_getacl3resok(rqstp, resp);
 		break;
 	default:
 		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
 			return false;
+		trace_enc_getacl3resfail(rqstp, resp->status);
 	}
 
 	return true;
@@ -223,8 +228,14 @@ nfs3svc_encode_setaclres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_attrstat *resp = rqstp->rq_resp;
 
-	return svcxdr_encode_nfsstat3(xdr, resp->status) &&
-		svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh);
+	if (!svcxdr_encode_nfsstat3(xdr, resp->status))
+		return false;
+	if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
+		return false;
+
+	if (resp->status != nfs_ok)
+		trace_enc_setacl3resfail(rqstp, resp->status);
+	return true;
 }
 
 /*

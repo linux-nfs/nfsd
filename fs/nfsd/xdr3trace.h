@@ -149,6 +149,7 @@ DEFINE_SVC_XDR_RESFAIL_EVENT(enc_commit3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_create3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsinfo3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_fsstat3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getacl3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_getattr3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_link3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_lookup3resfail);
@@ -157,6 +158,7 @@ DEFINE_SVC_XDR_RESFAIL_EVENT(enc_read3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readdir3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_readlink3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_rename3resfail);
+DEFINE_SVC_XDR_RESFAIL_EVENT(enc_setacl3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_wccstat3resfail);
 DEFINE_SVC_XDR_RESFAIL_EVENT(enc_write3resfail);
 
@@ -308,6 +310,30 @@ TRACE_EVENT(dec_fhandle3args,
 	),
 	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x",
 		TRACE_XDR_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(dec_getacl3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_getaclargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u32, mask)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__entry->mask = args->mask;
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x mask=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, show_nfs3_acl_mask(__entry->mask)
 	)
 );
 
@@ -623,6 +649,30 @@ TRACE_EVENT(dec_sattrguard3,
 	)
 );
 
+TRACE_EVENT(dec_setacl3args,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_setaclargs *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u32, mask)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = knfsd_fh_hash(&args->fh.fh_handle);
+		__entry->mask = args->mask;
+	),
+	TP_printk(TRACE_XDR_FORMAT "fh_hash=0x%08x mask=%s",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, show_nfs3_acl_mask(__entry->mask)
+	)
+);
+
 TRACE_EVENT(dec_specdata3,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,
@@ -854,6 +904,28 @@ TRACE_EVENT(enc_fsstat3resok,
 		__entry->tbytes, __entry->fbytes, __entry->abytes,
 		__entry->tfiles, __entry->ffiles, __entry->afiles,
 		__entry->invarsec
+	)
+);
+
+TRACE_EVENT(enc_getacl3resok,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd3_getaclres *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, mask)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->mask = resp->mask;
+	),
+	TP_printk(TRACE_XDR_FORMAT "mask=%s",
+		TRACE_XDR_VARARGS,
+		show_nfs3_acl_mask(__entry->mask)
 	)
 );
 
