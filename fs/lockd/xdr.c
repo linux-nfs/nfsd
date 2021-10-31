@@ -246,6 +246,7 @@ nlmsvc_decode_res(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (!svcxdr_decode_stats(xdr, &resp->status))
 		return false;
 
+	trace_dec_grantedargs(rqstp, resp);
 	return true;
 }
 

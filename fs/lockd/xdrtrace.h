@@ -140,6 +140,30 @@ TRACE_EVENT(dec_cancargs,
 	)
 );
 
+TRACE_EVENT(dec_grantedargs,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_res *args
+	),
+	TP_ARGS(rqstp, args),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, cookie_hash)
+		__field(unsigned long, status)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->cookie_hash = nfs_cookie_hash(&args->cookie);
+		__entry->status = be32_to_cpu(args->status);
+	),
+	TP_printk(TRACE_XDR_FORMAT "cookie_hash=0x%08x status=%s",
+		TRACE_XDR_VARARGS,
+		__entry->cookie_hash, show_nlm_status(__entry->status)
+	)
+);
+
 TRACE_EVENT(dec_lockargs,
 	TP_PROTO(
 		const struct svc_rqst *rqstp,
