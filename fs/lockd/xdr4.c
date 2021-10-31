@@ -90,7 +90,8 @@ svcxdr_decode_lock(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 }
 
 static bool
-svcxdr_encode_holder(struct xdr_stream *xdr, const struct nlm_lock *lock)
+svcxdr_encode_holder(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+		     const struct nlm_lock *lock)
 {
 	const struct file_lock *fl = &lock->fl;
 	s64 start, len;
@@ -112,18 +113,23 @@ svcxdr_encode_holder(struct xdr_stream *xdr, const struct nlm_lock *lock)
 	if (xdr_stream_encode_u64(xdr, len) < 0)
 		return false;
 
+	trace_enc_testresdenied(rqstp, lock, start, len);
 	return true;
 }
 
 static bool
-svcxdr_encode_testrply(struct xdr_stream *xdr, const struct nlm_res *resp)
+svcxdr_encode_testrply(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+		       const struct nlm_res *resp)
 {
 	if (!svcxdr_encode_stats(xdr, resp->status))
 		return false;
 	switch (resp->status) {
 	case nlm_lck_denied:
-		if (!svcxdr_encode_holder(xdr, &resp->lock))
+		if (!svcxdr_encode_holder(rqstp, xdr, &resp->lock))
 			return false;
+		break;
+	default:
+		trace_enc_testresstat(rqstp, resp);
 	}
 
 	return true;
@@ -324,7 +330,7 @@ nlm4svc_encode_testres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	struct nlm_res *resp = rqstp->rq_resp;
 
 	return svcxdr_encode_cookie(xdr, &resp->cookie) &&
-		svcxdr_encode_testrply(xdr, resp);
+		svcxdr_encode_testrply(rqstp, xdr, resp);
 }
 
 bool

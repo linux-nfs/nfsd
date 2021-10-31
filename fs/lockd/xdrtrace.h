@@ -383,6 +383,61 @@ TRACE_EVENT(dec_unlockargs,
  ** Server-side result encoding tracepoints
  **/
 
+TRACE_EVENT(enc_testresstat,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_res *resp
+	),
+	TP_ARGS(rqstp, resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(unsigned long, test_stat)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->test_stat = be32_to_cpu(resp->status);
+	),
+	TP_printk(TRACE_XDR_FORMAT "test_stat=%s",
+		TRACE_XDR_VARARGS, show_nlm_status(__entry->test_stat)
+	)
+);
+
+TRACE_EVENT(enc_testresdenied,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_lock *lock,
+		s64 start,
+		s64 len
+	),
+	TP_ARGS(rqstp, lock, start, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, uppid)
+		__field(s64, offset)
+		__field(s64, len)
+		__field(bool, exclusive)
+	),
+	TP_fast_assign(
+		const struct file_lock *fl = &lock->fl;
+
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->uppid = lock->svid;
+		__entry->offset = start;
+		__entry->len = len;
+		__entry->exclusive = (fl->fl_type != F_RDLCK);
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"uppid=%x offset=%lld len=%lld%s",
+		TRACE_XDR_VARARGS,
+		__entry->uppid, __entry->offset, __entry->len,
+		__entry->exclusive ? " (exclusive)" : ""
+	)
+);
+
 
 #endif /* _LOCKD_XDR_TRACE_H */
 
