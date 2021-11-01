@@ -42,6 +42,7 @@
 
 #include "netns.h"
 #include "procfs.h"
+#include "xdrtrace.h"
 
 #define NLMDBG_FACILITY		NLMDBG_SVC
 #define LOCKD_BUFSIZE		(1024 + NLMSVC_XDRSIZE)
@@ -712,10 +713,12 @@ static int nlmsvc_dispatch(struct svc_rqst *rqstp, __be32 *statp)
 	return 1;
 
 out_decode_err:
+	trace_nlm_garbage_args_err(rqstp);
 	*statp = rpc_garbage_args;
 	return 1;
 
 out_encode_err:
+	trace_nlm_cant_encode_err(rqstp);
 	*statp = rpc_system_err;
 	return 1;
 }

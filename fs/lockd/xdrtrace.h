@@ -102,6 +102,45 @@ TRACE_DEFINE_ENUM(NLM_FAILED);
  ** Event classes
  **/
 
+DECLARE_EVENT_CLASS(svc_xdr_err_class,
+	TP_PROTO(
+		const struct svc_rqst *rqstp
+	),
+	TP_ARGS(rqstp),
+	TP_STRUCT__entry(
+		__array(unsigned char, server, sizeof(struct sockaddr_in6))
+		__array(unsigned char, client, sizeof(struct sockaddr_in6))
+		__field(unsigned int, netns_ino)
+		__field(u32, xid)
+		__field(u32, program)
+		__field(u32, version)
+		__field(u32, procedure)
+		__string(procname, svc_proc_name(rqstp))
+	),
+	TP_fast_assign(
+		const struct svc_xprt *xprt = rqstp->rq_xprt;
+
+		memcpy(__entry->server, &xprt->xpt_local, xprt->xpt_locallen);
+		memcpy(__entry->client, &xprt->xpt_remote, xprt->xpt_remotelen);
+		__entry->netns_ino = xprt->xpt_net->ns.inum;
+		__entry->xid = be32_to_cpu(rqstp->rq_xid);
+		__entry->program = rqstp->rq_prog;
+		__entry->version = rqstp->rq_vers;
+		__entry->procedure = rqstp->rq_proc;
+		__assign_str(procname, svc_proc_name(rqstp));
+	),
+	TP_printk("xid=0x%08x NLMv%u %s",
+		__entry->xid, __entry->version, __get_str(procname)
+	)
+);
+#define DEFINE_SVC_XDR_ERR_EVENT(name) \
+DEFINE_EVENT(svc_xdr_err_class, name, \
+	TP_PROTO(const struct svc_rqst *rqstp), \
+	TP_ARGS(rqstp))
+
+DEFINE_SVC_XDR_ERR_EVENT(nlm_garbage_args_err);
+DEFINE_SVC_XDR_ERR_EVENT(nlm_cant_encode_err);
+
 DECLARE_EVENT_CLASS(svc_xdr_void_class,
 	TP_PROTO(
 		const struct svc_rqst *rqstp
