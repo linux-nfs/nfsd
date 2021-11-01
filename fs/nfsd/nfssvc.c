@@ -1092,6 +1092,7 @@ out_encode_err:
  */
 bool nfssvc_decode_voidarg(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
+	trace_dec_nfsd_voidargs(rqstp);
 	return true;
 }
 
