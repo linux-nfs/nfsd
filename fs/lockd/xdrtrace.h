@@ -113,6 +113,42 @@ DEFINE_SVC_XDR_VOID_EVENT(dec_nlm_voidargs);
  ** Server-side argument decoding tracepoints
  **/
 
+TRACE_EVENT(dec_nlm_lock_arg,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nlm_lock *lock,
+		s64 start,
+		s64 len
+	),
+	TP_ARGS(rqstp, lock, start, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_FIELDS(rqstp)
+
+		__field(u32, fh_hash)
+		__field(u32, uppid)
+		__field(loff_t, offset)
+		__field(loff_t, len)
+		__field(unsigned long, type)
+		__string_len(caller, caller, lock->len)
+		__string_len(owner, owner, lock->oh.len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_ASSIGNS(rqstp);
+
+		__entry->fh_hash = nfs_fhandle_hash(&lock->fh);
+		__entry->uppid = lock->svid;
+		__entry->offset = start;
+		__entry->len = len;
+		__assign_str_len(caller, lock->caller, lock->len);
+		__assign_str_len(owner, lock->oh.data, lock->oh.len);
+	),
+	TP_printk(TRACE_XDR_FORMAT
+		"fh_hash=0x%08x uppid=%x offset=%lld len=%lld",
+		TRACE_XDR_VARARGS,
+		__entry->fh_hash, __entry->uppid, __entry->offset, __entry->len
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints

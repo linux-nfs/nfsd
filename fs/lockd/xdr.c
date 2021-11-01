@@ -70,7 +70,8 @@ svcxdr_decode_fhandle(struct xdr_stream *xdr, struct nfs_fh *fh)
 }
 
 static bool
-svcxdr_decode_lock(struct xdr_stream *xdr, struct nlm_lock *lock)
+svcxdr_decode_lock(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+		   struct nlm_lock *lock)
 {
 	struct file_lock *fl = &lock->fl;
 	s32 start, len, end;
@@ -98,6 +99,7 @@ svcxdr_decode_lock(struct xdr_stream *xdr, struct nlm_lock *lock)
 	else
 		fl->fl_end = s32_to_loff_t(end);
 
+	trace_dec_nlm_lock_arg(rqstp, lock, start, len);
 	return true;
 }
 
@@ -163,7 +165,7 @@ nlmsvc_decode_testargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	if (xdr_stream_decode_bool(xdr, &exclusive) < 0)
 		return false;
-	if (!svcxdr_decode_lock(xdr, &argp->lock))
+	if (!svcxdr_decode_lock(rqstp, xdr, &argp->lock))
 		return false;
 	if (exclusive)
 		argp->lock.fl.fl_type = F_WRLCK;
@@ -183,7 +185,7 @@ nlmsvc_decode_lockargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	if (xdr_stream_decode_bool(xdr, &exclusive) < 0)
 		return false;
-	if (!svcxdr_decode_lock(xdr, &argp->lock))
+	if (!svcxdr_decode_lock(rqstp, xdr, &argp->lock))
 		return false;
 	if (exclusive)
 		argp->lock.fl.fl_type = F_WRLCK;
@@ -208,7 +210,7 @@ nlmsvc_decode_cancargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		return false;
 	if (xdr_stream_decode_bool(xdr, &exclusive) < 0)
 		return false;
-	if (!svcxdr_decode_lock(xdr, &argp->lock))
+	if (!svcxdr_decode_lock(rqstp, xdr, &argp->lock))
 		return false;
 	if (exclusive)
 		argp->lock.fl.fl_type = F_WRLCK;
@@ -223,7 +225,7 @@ nlmsvc_decode_unlockargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 
 	if (!svcxdr_decode_cookie(xdr, &argp->cookie))
 		return false;
-	if (!svcxdr_decode_lock(xdr, &argp->lock))
+	if (!svcxdr_decode_lock(rqstp, xdr, &argp->lock))
 		return false;
 	argp->lock.fl.fl_type = F_UNLCK;
 
