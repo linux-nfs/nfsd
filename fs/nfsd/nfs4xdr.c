@@ -1308,6 +1308,7 @@ nfsd4_decode_putfh(struct nfsd4_compoundargs *argp, struct nfsd4_putfh *putfh)
 		return nfserr_jukebox;
 
 	putfh->no_verify = false;
+	trace_dec_putfh4args(argp, putfh);
 	return nfs_ok;
 }
 
@@ -4251,6 +4252,13 @@ nfsd4_encode_open_downgrade(struct nfsd4_compoundres *resp, __be32 nfserr, struc
 	return nfs_ok;
 }
 
+static __be32
+nfsd4_encode_putfh(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_putfh4resok(resp);
+	return nfs_ok;
+}
+
 static __be32 nfsd4_encode_splice_read(
 				struct nfsd4_compoundres *resp,
 				struct nfsd4_read *read,
@@ -5643,7 +5651,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_OPENATTR]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_OPEN_CONFIRM]	= (nfsd4_enc)nfsd4_encode_open_confirm,
 	[OP_OPEN_DOWNGRADE]	= (nfsd4_enc)nfsd4_encode_open_downgrade,
-	[OP_PUTFH]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_PUTFH]		= (nfsd4_enc)nfsd4_encode_putfh,
 	[OP_PUTPUBFH]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_PUTROOTFH]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_READ]		= (nfsd4_enc)nfsd4_encode_read,

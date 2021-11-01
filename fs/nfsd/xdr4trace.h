@@ -193,6 +193,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_lookup4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_lookupp4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_nverify4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_offload_cancel4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putfh4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
@@ -1442,6 +1443,31 @@ TRACE_EVENT(dec_open_downgrade4args,
 		"seqid=%u share=%s",
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
 		__entry->seqid, show_nfs4_open_sharedeny_flags(__entry->share)
+	)
+);
+
+TRACE_EVENT(dec_putfh4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_putfh *putfh
+	),
+	TP_ARGS(argp, putfh),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, fh_hash)
+	),
+	TP_fast_assign(
+		struct knfsd_fh fh_handle;
+
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		fh_handle.fh_size = putfh->pf_fhlen;
+		memcpy(&fh_handle.fh_raw, putfh->pf_fhval, putfh->pf_fhlen);
+		__entry->fh_hash = knfsd_fh_hash(&fh_handle);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fh_hash=0x%08x",
+		TRACE_XDR_CMPD_VARARGS, __entry->fh_hash
 	)
 );
 
