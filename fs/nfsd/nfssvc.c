@@ -1107,6 +1107,7 @@ bool nfssvc_decode_voidarg(struct svc_rqst *rqstp, struct xdr_stream *xdr)
  */
 bool nfssvc_encode_voidres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
+	trace_enc_nfsd_voidresok(rqstp);
 	return true;
 }
 

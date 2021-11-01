@@ -58,6 +58,7 @@ DEFINE_EVENT(svc_xdr_void_class, name, \
 	TP_ARGS(rqstp))
 
 DEFINE_SVC_XDR_VOID_EVENT(dec_nfsd_voidargs);
+DEFINE_SVC_XDR_VOID_EVENT(enc_nfsd_voidresok);
 
 DECLARE_EVENT_CLASS(svc_xdr_err_class,
 	TP_PROTO(
