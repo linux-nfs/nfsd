@@ -2378,7 +2378,6 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 	int readcount = 0;
 	int readbytes = 0;
 	__be32 *p;
-	int i;
 
 	if (xdr_stream_decode_u32(argp->xdr, &argp->taglen) < 0)
 		return false;
@@ -2414,8 +2413,8 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 	if (argp->minorversion > NFSD_SUPPORTED_MINOR_VERSION)
 		argp->opcnt = 0;
 
-	for (i = 0; i < argp->opcnt; i++) {
-		op = &argp->ops[i];
+	for (argp->opidx = 0; argp->opidx < argp->opcnt; argp->opidx++) {
+		op = &argp->ops[argp->opidx];
 		op->replay = NULL;
 
 		if (xdr_stream_decode_u32(argp->xdr, &op->opnum) < 0)
@@ -2424,7 +2423,8 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 			op->status = nfsd4_dec_ops[op->opnum](argp, &op->u);
 			if (op->status != nfs_ok)
 				trace_nfsd_compound_decode_err(argp->rqstp,
-							       argp->opcnt, i,
+							       argp->opcnt,
+							       argp->opidx,
 							       op->opnum,
 							       op->status);
 		} else {
@@ -2453,7 +2453,7 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 			max_reply += NFS4_OPAQUE_LIMIT;
 
 		if (op->status) {
-			argp->opcnt = i+1;
+			argp->opcnt = argp->opidx + 1;
 			break;
 		}
 	}
