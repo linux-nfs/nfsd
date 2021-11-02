@@ -5351,8 +5351,7 @@ nfsd4_encode_operation(struct nfsd4_compoundres *resp, struct nfsd4_op *op)
 	       !nfsd4_enc_ops[op->opnum]);
 	encoder = nfsd4_enc_ops[op->opnum];
 	op->status = encoder(resp, op->status, &op->u);
-	if (op->status)
-		trace_nfsd_compound_encode_err(rqstp, op->opnum, op->status);
+	trace_nfsd_compound_encode_err(resp, op);
 	if (opdesc && opdesc->op_release)
 		opdesc->op_release(&op->u);
 	xdr_commit_encode(xdr);
