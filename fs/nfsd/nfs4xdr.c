@@ -56,7 +56,7 @@
 #include "pnfs.h"
 #include "filecache.h"
 
-#include "trace.h"
+#include "xdrtrace.h"
 
 #ifdef CONFIG_NFSD_V4_SECURITY_LABEL
 #include <linux/security.h>

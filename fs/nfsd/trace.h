@@ -13,24 +13,6 @@
 #include "export.h"
 #include "nfsfh.h"
 
-#define NFSD_TRACE_PROC_RES_FIELDS \
-		__field(unsigned int, netns_ino) \
-		__field(u32, xid) \
-		__field(unsigned long, status) \
-		__array(unsigned char, server, sizeof(struct sockaddr_in6)) \
-		__array(unsigned char, client, sizeof(struct sockaddr_in6))
-
-#define NFSD_TRACE_PROC_RES_ASSIGNMENTS(error) \
-		do { \
-			__entry->netns_ino = SVC_NET(rqstp)->ns.inum; \
-			__entry->xid = be32_to_cpu(rqstp->rq_xid); \
-			__entry->status = be32_to_cpu(error); \
-			memcpy(__entry->server, &rqstp->rq_xprt->xpt_local, \
-			       rqstp->rq_xprt->xpt_locallen); \
-			memcpy(__entry->client, &rqstp->rq_xprt->xpt_remote, \
-			       rqstp->rq_xprt->xpt_remotelen); \
-		} while (0);
-
 #define show_nfsd_may_flags(x)						\
 	__print_flags(x, "|",						\
 		{ NFSD_MAY_EXEC,		"EXEC" },		\
@@ -92,55 +74,6 @@ TRACE_EVENT(nfsd_compound_status,
 		__entry->resp_opcnt, __entry->args_opcnt,
 		__get_str(name), __entry->status)
 )
-
-TRACE_EVENT(nfsd_compound_decode_err,
-	TP_PROTO(
-		const struct svc_rqst *rqstp,
-		u32 args_opcnt,
-		u32 resp_opcnt,
-		u32 opnum,
-		__be32 status
-	),
-	TP_ARGS(rqstp, args_opcnt, resp_opcnt, opnum, status),
-	TP_STRUCT__entry(
-		NFSD_TRACE_PROC_RES_FIELDS
-
-		__field(u32, args_opcnt)
-		__field(u32, resp_opcnt)
-		__field(u32, opnum)
-	),
-	TP_fast_assign(
-		NFSD_TRACE_PROC_RES_ASSIGNMENTS(status)
-
-		__entry->args_opcnt = args_opcnt;
-		__entry->resp_opcnt = resp_opcnt;
-		__entry->opnum = opnum;
-	),
-	TP_printk("op=%u/%u opnum=%u status=%lu",
-		__entry->resp_opcnt, __entry->args_opcnt,
-		__entry->opnum, __entry->status)
-);
-
-TRACE_EVENT(nfsd_compound_encode_err,
-	TP_PROTO(
-		const struct svc_rqst *rqstp,
-		u32 opnum,
-		__be32 status
-	),
-	TP_ARGS(rqstp, opnum, status),
-	TP_STRUCT__entry(
-		NFSD_TRACE_PROC_RES_FIELDS
-
-		__field(u32, opnum)
-	),
-	TP_fast_assign(
-		NFSD_TRACE_PROC_RES_ASSIGNMENTS(status)
-
-		__entry->opnum = opnum;
-	),
-	TP_printk("opnum=%u status=%lu",
-		__entry->opnum, __entry->status)
-);
 
 #define show_fs_file_type(x) \
 	__print_symbolic(x, \

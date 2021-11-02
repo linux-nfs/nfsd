@@ -96,6 +96,12 @@ DEFINE_SVC_XDR_ERR_EVENT(nfsd_cant_encode_err);
 
 #include "xdr3trace.h"
 
+#ifdef CONFIG_NFSD_V4
+
+#include "xdr4trace.h"
+
+#endif /* CONFIG_NFSD_V4 */
+
 #endif /* _NFSD_XDR_TRACE_H */
 
 #undef TRACE_INCLUDE_PATH
