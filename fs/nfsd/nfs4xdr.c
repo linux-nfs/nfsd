@@ -2051,6 +2051,7 @@ nfsd4_decode_sequence(struct nfsd4_compoundargs *argp,
 	seq->cachethis = be32_to_cpup(p);
 
 	seq->status_flags = 0;
+	trace_dec_sequence4args(argp, seq);
 	return nfs_ok;
 }
 
@@ -5022,7 +5023,9 @@ nfsd4_encode_sequence(struct nfsd4_compoundres *resp, __be32 nfserr,
 	*p++ = cpu_to_be32(seq->status_flags);
 
 	resp->cstate.data_offset = xdr->buf->len; /* DRC cache data pointer */
-	return 0;
+
+	trace_enc_sequence4resok(resp, seq);
+	return nfs_ok;
 }
 
 static __be32

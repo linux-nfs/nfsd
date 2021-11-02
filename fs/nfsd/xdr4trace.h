@@ -1751,6 +1751,39 @@ TRACE_EVENT(dec_seek4args,
 	)
 );
 
+TRACE_EVENT(dec_sequence4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_sequence *seq
+	),
+	TP_ARGS(argp, seq),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__array(u8, sessionid, NFS4_MAX_SESSIONID_LEN)
+		__field(u32, seqid)
+		__field(u32, slotid)
+		__field(u32, maxslots)
+		__field(bool, cachethis)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		memcpy(__entry->sessionid, seq->sessionid.data,
+		       NFS4_MAX_SESSIONID_LEN);
+		__entry->seqid = seq->seqid;
+		__entry->slotid = seq->slotid;
+		__entry->maxslots = seq->maxslots;
+		__entry->cachethis = !!seq->cachethis;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "sessionid=%s seqid=%u slot=%u/%u%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_sessionid(__entry->sessionid),
+		__entry->seqid, __entry->slotid, __entry->maxslots,
+		__entry->cachethis ?  " (cachethis)" : ""
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2738,6 +2771,40 @@ TRACE_EVENT(enc_seek4resok,
 	TP_printk(TRACE_XDR_CMPD_FORMAT "offset=%llu%s",
 		TRACE_XDR_CMPD_VARARGS,
 		__entry->offset, __entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_sequence4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_sequence *seq
+	),
+	TP_ARGS(resp, seq),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__array(u8, sessionid, NFS4_MAX_SESSIONID_LEN)
+		__field(u32, seqid)
+		__field(u32, slotid)
+		__field(u32, maxslots)
+		__field(unsigned long, flags)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		memcpy(__entry->sessionid, seq->sessionid.data,
+		       NFS4_MAX_SESSIONID_LEN);
+		__entry->seqid = seq->seqid;
+		__entry->slotid = seq->slotid;
+		__entry->maxslots = seq->maxslots;
+		__entry->flags = seq->status_flags;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"sessionid=%s seqid=%u slot=%u/%u flags=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_sessionid(__entry->sessionid),
+		__entry->seqid, __entry->slotid, __entry->maxslots,
+		show_nfs4_seq4_status(__entry->flags)
 	)
 );
 
