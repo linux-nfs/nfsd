@@ -1919,6 +1919,36 @@ TRACE_EVENT(dec_verify4args,
 	)
 );
 
+TRACE_EVENT(dec_write4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_write *write
+	),
+	TP_ARGS(argp, write),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u32, count)
+		__field(u64, offset)
+		__field(unsigned long, stable)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&write->wr_stateid);
+
+		__entry->count = write->wr_buflen;
+		__entry->offset = write->wr_offset;
+		__entry->stable = write->wr_stable_how;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"count=%u offset=%llu stable=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->count, __entry->offset,
+		show_nfs_stable_how(__entry->stable)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -3003,6 +3033,34 @@ TRACE_EVENT(enc_test_stateid4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT "status=%s",
 		TRACE_XDR_CMPD_VARARGS, show_nfs4_status(__entry->status)
+	)
+);
+
+TRACE_EVENT(enc_write4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_write *write
+	),
+	TP_ARGS(resp, write),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+
+		__field(u32, count)
+		__field(unsigned long, committed)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_VERIFIER_ASSIGN(write->wr_verifier);
+
+		__entry->count = write->wr_bytes_written;
+		__entry->committed = write->wr_how_written;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"count=%u committed=%s " TRACE_NFS4_VERIFIER_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, __entry->count,
+		show_nfs_stable_how(__entry->committed),
+		TRACE_NFS4_VERIFIER_VARARG
 	)
 );
 

@@ -1638,6 +1638,7 @@ nfsd4_decode_write(struct nfsd4_compoundargs *argp, struct nfsd4_write *write)
 	write->wr_bytes_written = 0;
 	write->wr_how_written = 0;
 	memset(&write->wr_verifier, 0, sizeof(write->wr_verifier));
+	trace_dec_write4args(argp, write);
 	return nfs_ok;
 }
 
@@ -4895,7 +4896,9 @@ nfsd4_encode_write(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_w
 	*p++ = cpu_to_be32(write->wr_how_written);
 	p = xdr_encode_opaque_fixed(p, write->wr_verifier.data,
 						NFS4_VERIFIER_SIZE);
-	return 0;
+
+	trace_enc_write4resok(resp, write);
+	return nfs_ok;
 }
 
 static __be32
