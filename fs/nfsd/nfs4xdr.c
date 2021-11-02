@@ -2421,12 +2421,7 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 			return false;
 		if (nfsd4_opnum_in_range(argp, op)) {
 			op->status = nfsd4_dec_ops[op->opnum](argp, &op->u);
-			if (op->status != nfs_ok)
-				trace_nfsd_compound_decode_err(argp->rqstp,
-							       argp->opcnt,
-							       argp->opidx,
-							       op->opnum,
-							       op->status);
+			trace_nfsd_compound_decode_err(argp, op);
 		} else {
 			op->opnum = OP_ILLEGAL;
 			op->status = nfserr_op_illegal;
