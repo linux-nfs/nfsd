@@ -61,7 +61,7 @@ TRACE_EVENT(nfsd_compound_decode_err,
 		__array(unsigned char, client, sizeof(struct sockaddr_in6))
 		__field(u32, args_opcnt)
 		__field(u32, resp_opcnt)
-		__field(u32, opnum)
+		__string(opname, nfsd4_op_name(opnum))
 	),
 	TP_fast_assign(
 		const struct svc_xprt *xprt = rqstp->rq_xprt;
@@ -73,11 +73,13 @@ TRACE_EVENT(nfsd_compound_decode_err,
 		memcpy(__entry->client, &xprt->xpt_remote, xprt->xpt_remotelen);
 		__entry->args_opcnt = args_opcnt;
 		__entry->resp_opcnt = resp_opcnt;
-		__entry->opnum = opnum;
+		__assign_str(opname, nfsd4_op_name(opnum));
 	),
-	TP_printk("op=%u/%u opnum=%u status=%lu",
+	TP_printk("xid=0x%08x %s: op=%u/%u status=%s",
+		__entry->xid, __get_str(opname),
 		__entry->resp_opcnt, __entry->args_opcnt,
-		__entry->opnum, __entry->status)
+		show_nfs4_status(__entry->status)
+	)
 );
 
 TRACE_EVENT(nfsd_compound_encode_err,
@@ -93,7 +95,7 @@ TRACE_EVENT(nfsd_compound_encode_err,
 		__field(unsigned long, status)
 		__array(unsigned char, server, sizeof(struct sockaddr_in6))
 		__array(unsigned char, client, sizeof(struct sockaddr_in6))
-		__field(u32, opnum)
+		__string(opname, nfsd4_op_name(opnum))
 	),
 	TP_fast_assign(
 		const struct svc_xprt *xprt = rqstp->rq_xprt;
@@ -103,10 +105,12 @@ TRACE_EVENT(nfsd_compound_encode_err,
 		__entry->status = be32_to_cpu(status);
 		memcpy(__entry->server, &xprt->xpt_local, xprt->xpt_locallen);
 		memcpy(__entry->client, &xprt->xpt_remote, xprt->xpt_remotelen);
-		__entry->opnum = opnum;
+		__assign_str(opname, nfsd4_op_name(opnum));
 	),
-	TP_printk("opnum=%u status=%lu",
-		__entry->opnum, __entry->status)
+	TP_printk("xid=0x%08x %s: status=%s",
+		__entry->xid, __get_str(opname),
+		show_nfs4_status(__entry->status)
+	)
 );
 
 

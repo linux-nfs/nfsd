@@ -771,6 +771,7 @@ static inline bool nfsd4_last_compound_op(struct svc_rqst *rqstp)
 const struct nfsd4_operation *OPDESC(struct nfsd4_op *op);
 int nfsd4_max_reply(struct svc_rqst *rqstp, struct nfsd4_op *op);
 void warn_on_nonidempotent_op(struct nfsd4_op *op);
+const char *nfsd4_op_name(unsigned opnum);
 
 #define NFS4_SVC_XDRSIZE		sizeof(struct nfsd4_compoundargs)
 
