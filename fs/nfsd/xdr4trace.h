@@ -854,6 +854,26 @@ TRACE_EVENT(dec_free_stateid4args,
 	)
 );
 
+TRACE_EVENT(dec_getattr4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_getattr *getattr
+	),
+	TP_ARGS(argp, getattr),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_BITMAP_ASSIGNS(getattr->ga_bmval);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+
 /**
  ** Server-side result encoding tracepoints
  **/
@@ -1105,6 +1125,25 @@ TRACE_EVENT(enc_exchange_id4resok,
 		"seqid=%u flags=%s",
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
 		__entry->seqid, show_nfs4_exchgid4_flags(__entry->flags)
+	)
+);
+
+TRACE_EVENT(enc_getattr4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_getattr *getattr
+	),
+	TP_ARGS(resp, getattr),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_BITMAP_ASSIGNS(getattr->ga_bmval);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
 	)
 );
 

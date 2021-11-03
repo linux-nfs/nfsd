@@ -867,12 +867,19 @@ nfsd4_decode_delegreturn(struct nfsd4_compoundargs *argp, struct nfsd4_delegretu
 	return nfs_ok;
 }
 
-static inline __be32
+static __be32
 nfsd4_decode_getattr(struct nfsd4_compoundargs *argp, struct nfsd4_getattr *getattr)
 {
+	__be32 status;
+
 	memset(getattr, 0, sizeof(*getattr));
-	return nfsd4_decode_bitmap4(argp, getattr->ga_bmval,
-				    ARRAY_SIZE(getattr->ga_bmval));
+	status = nfsd4_decode_bitmap4(argp, getattr->ga_bmval,
+				      ARRAY_SIZE(getattr->ga_bmval));
+	if (status)
+		return status;
+
+	trace_dec_getattr4args(argp, getattr);
+	return nfs_ok;
 }
 
 static __be32
@@ -3857,9 +3864,15 @@ nfsd4_encode_getattr(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4
 {
 	struct svc_fh *fhp = getattr->ga_fhp;
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_encode_fattr(xdr, fhp, fhp->fh_export, fhp->fh_dentry,
+	status = nfsd4_encode_fattr(xdr, fhp, fhp->fh_export, fhp->fh_dentry,
 				    getattr->ga_bmval, resp->rqstp, 0);
+	if (status)
+		return status;
+
+	trace_enc_getattr4resok(resp, getattr);
+	return nfs_ok;
 }
 
 static __be32
