@@ -1343,6 +1343,7 @@ nfsd4_decode_read(struct nfsd4_compoundargs *argp, struct nfsd4_read *read)
 	if (xdr_stream_decode_u32(argp->xdr, &read->rd_length) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_read4args(argp, read);
 	return nfs_ok;
 }
 
@@ -4333,7 +4334,8 @@ static __be32 nfsd4_encode_splice_read(
 	buf->buflen = buf->len + space_left;
 	xdr->end = (__be32 *)((void *)xdr->end + space_left);
 
-	return 0;
+	trace_enc_read4resok(resp, read);
+	return nfs_ok;
 
 out_err:
 	/*
@@ -4370,6 +4372,8 @@ static __be32 nfsd4_encode_readv(struct nfsd4_compoundres *resp,
 
 	write_bytes_to_xdr_buf(xdr->buf, starting_len + maxcount, &zero,
 			       xdr_pad_size(maxcount));
+
+	trace_enc_read4resok(resp, read);
 	return nfs_ok;
 }
 
