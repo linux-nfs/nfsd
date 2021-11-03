@@ -1024,6 +1024,27 @@ TRACE_EVENT(dec_layoutreturn4args,
 	)
 );
 
+TRACE_EVENT(dec_link4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_link *link
+	),
+	TP_ARGS(argp, link),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(name, name, link->li_namelen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(name, link->li_name, link->li_namelen);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "name=%s",
+		TRACE_XDR_CMPD_VARARGS, __get_str(name)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1421,6 +1442,25 @@ TRACE_EVENT(enc_layoutreturn4resok,
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT "%s",
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
 		__entry->present ? " (present)" : ""
+	)
+);
+
+TRACE_EVENT(enc_link4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_link *link
+	),
+	TP_ARGS(resp, link),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CINFO_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_CINFO_ASSIGNS(link->li_cinfo);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CINFO_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CINFO_VARARGS
 	)
 );
 

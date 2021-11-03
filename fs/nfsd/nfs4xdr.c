@@ -892,8 +892,15 @@ nfsd4_decode_getfh(struct nfsd4_compoundargs *argp, void *p)
 static __be32
 nfsd4_decode_link(struct nfsd4_compoundargs *argp, struct nfsd4_link *link)
 {
+	__be32 status;
+
 	memset(link, 0, sizeof(*link));
-	return nfsd4_decode_component4(argp, &link->li_name, &link->li_namelen);
+	status = nfsd4_decode_component4(argp, &link->li_name, &link->li_namelen);
+	if (status)
+		return status;
+
+	trace_dec_link4args(argp, link);
+	return nfs_ok;
 }
 
 static __be32
@@ -3995,7 +4002,9 @@ nfsd4_encode_link(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_li
 	if (!p)
 		return nfserr_resource;
 	p = encode_cinfo(p, &link->li_cinfo);
-	return 0;
+
+	trace_enc_link4resok(resp, link);
+	return nfs_ok;
 }
 
 
