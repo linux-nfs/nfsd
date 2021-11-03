@@ -916,8 +916,12 @@ nfsd4_decode_open_to_lock_owner4(struct nfsd4_compoundargs *argp,
 		return status;
 	if (xdr_stream_decode_u32(argp->xdr, &lock->lk_new_lock_seqid) < 0)
 		return nfserr_bad_xdr;
-	return nfsd4_decode_state_owner4(argp, &lock->lk_new_clientid,
-					 &lock->lk_new_owner);
+	status = nfsd4_decode_state_owner4(argp, &lock->lk_new_clientid,
+					  &lock->lk_new_owner);
+	if (status)
+		return status;
+	trace_dec_open_to_lockowner4args(argp, lock);
+	return nfs_ok;
 }
 
 static __be32
@@ -932,6 +936,7 @@ nfsd4_decode_exist_lock_owner4(struct nfsd4_compoundargs *argp,
 	if (xdr_stream_decode_u32(argp->xdr, &lock->lk_old_lock_seqid) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_exist_lock_owner4(argp, lock);
 	return nfs_ok;
 }
 
@@ -3965,10 +3970,13 @@ nfsd4_encode_lock(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_lo
 {
 	struct xdr_stream *xdr = resp->xdr;
 
-	if (!nfserr)
+	if (!nfserr) {
 		nfserr = nfsd4_encode_stateid(xdr, &lock->lk_resp_stateid);
-	else if (nfserr == nfserr_denied)
+		trace_enc_lock4resok(resp, nfserr, lock);
+	} else if (nfserr == nfserr_denied) {
 		nfserr = nfsd4_encode_lock_denied(xdr, &lock->lk_denied);
+		trace_enc_lock4resdenied(resp, nfserr, &lock->lk_denied);
+	}
 
 	return nfserr;
 }

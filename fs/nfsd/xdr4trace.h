@@ -1045,6 +1045,77 @@ TRACE_EVENT(dec_link4args,
 	)
 );
 
+TRACE_EVENT(dec_open_to_lockowner4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_lock *lock
+	),
+	TP_ARGS(argp, lock),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u32, open_seqid)
+		__field(u32, lock_seqid)
+		__string_len(owner, owner, lock->lk_new_owner.len)
+		__field(unsigned long, type)
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&lock->lk_new_open_stateid);
+
+		__entry->open_seqid = lock->lk_new_open_seqid;
+		__entry->lock_seqid = lock->lk_new_lock_seqid;
+		__assign_str_len(owner, lock->lk_new_owner.data,
+				 lock->lk_new_owner.len);
+		__entry->type = lock->lk_type;
+		__entry->offset = lock->lk_offset;
+		__entry->length = lock->lk_length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"open_seqid=%u lock_seqid=%u owner=%s "
+		"type=%s offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->open_seqid, __entry->lock_seqid,
+		__get_str(owner), show_nfs4_lock_type(__entry->type),
+		__entry->offset, __entry->length
+	)
+);
+
+TRACE_EVENT(dec_exist_lock_owner4,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_lock *lock
+	),
+	TP_ARGS(argp, lock),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u32, seqid)
+		__field(unsigned long, type)
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&lock->lk_old_lock_stateid);
+
+		__entry->seqid = lock->lk_old_lock_seqid;
+		__entry->type = lock->lk_type;
+		__entry->offset = lock->lk_offset;
+		__entry->length = lock->lk_length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"seqid=%u type=%s offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->seqid, show_nfs4_lock_type(__entry->type),
+		__entry->offset, __entry->length
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1464,6 +1535,66 @@ TRACE_EVENT(enc_link4resok,
 	)
 );
 
+TRACE_EVENT_CONDITION(enc_lock4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		__be32 nfserr,
+		const struct nfsd4_lock *lock
+	),
+	TP_ARGS(resp, nfserr, lock),
+	TP_CONDITION(nfserr == nfs_ok),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&lock->lk_resp_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
+TRACE_EVENT_CONDITION(enc_lock4resdenied,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		__be32 nfserr,
+		const struct nfsd4_lock_denied *ld
+	),
+	TP_ARGS(resp, nfserr, ld),
+	TP_CONDITION(nfserr == nfserr_denied),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+
+		__string_len(owner, owner, ld->ld_owner.len)
+		__field(unsigned long, type)
+		__field(u64, start)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->type = ld->ld_type;
+		__entry->start = ld->ld_start;
+		__entry->length = ld->ld_length;
+		if (ld->ld_owner.len) {
+			TRACE_NFS4_CLID_ASSIGNS(ld->ld_clientid);
+			__assign_str_len(owner, ld->ld_owner.data,
+					 ld->ld_owner.len);
+		} else {
+			__entry->cl_boot = 0;
+			__entry->cl_id = 0;
+		}
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT
+		"owner=%s type=%s start=%llu offset=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		__get_str(owner), show_nfs4_lock_type(__entry->type),
+		__entry->start, __entry->length
+	)
+);
 
 /**
  ** FATTR4 tracepoints
