@@ -13,6 +13,37 @@
  ** Helper macros
  **/
 
+#define TRACE_SVC_XDR_CMPD_FIELDS \
+		__field(u32, xid) \
+		__field(u32, opcnt) \
+		__field(u32, cur_op) \
+		__field(u32, minorversion)
+
+#define TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(a) \
+		do { \
+			const struct svc_rqst *rqstp = (a)->rqstp; \
+			__entry->xid = be32_to_cpu(rqstp->rq_xid); \
+			__entry->opcnt = (a)->opcnt; \
+			__entry->cur_op = (a)->opidx + 1; \
+			__entry->minorversion = (a)->minorversion; \
+		} while (0)
+
+#define TRACE_SVC_XDR_CMPD_RES_ASSIGNS(r) \
+		do { \
+			const struct svc_rqst *rqstp = (r)->rqstp; \
+			const struct nfsd4_compoundargs *argp = rqstp->rq_argp; \
+			__entry->xid = be32_to_cpu(rqstp->rq_xid); \
+			__entry->opcnt = argp->opcnt; \
+			__entry->cur_op = resp->opcnt; \
+			__entry->minorversion = argp->minorversion; \
+		} while (0)
+
+#define TRACE_XDR_CMPD_FORMAT \
+		"xid=0x%08x (%u/%u): "
+
+#define TRACE_XDR_CMPD_VARARGS \
+		__entry->xid, __entry->cur_op, __entry->opcnt
+
 #define TRACE_NFS4_STATEID_FIELDS \
 		__field(u32, cl_boot) \
 		__field(u32, cl_id) \
