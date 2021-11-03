@@ -1144,6 +1144,35 @@ TRACE_EVENT(dec_lockt4args,
 	)
 );
 
+TRACE_EVENT(dec_locku4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_locku *locku
+	),
+	TP_ARGS(argp, locku),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, seqid)
+		__field(unsigned long, type)
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->seqid = locku->lu_seqid;
+		__entry->type = locku->lu_type;
+		__entry->offset = locku->lu_offset;
+		__entry->length = locku->lu_length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"seqid=%u type=%s offset=%Lu length=%Lu",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->seqid, show_nfs4_lock_type(__entry->type),
+		__entry->offset, __entry->length
+	)
+);
 
 /**
  ** Server-side result encoding tracepoints
@@ -1677,6 +1706,25 @@ TRACE_EVENT_CONDITION(enc_lockt4resdenied,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
 		__get_str(owner), show_nfs4_lock_type(__entry->type),
 		__entry->start, __entry->length
+	)
+);
+
+TRACE_EVENT(enc_locku4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_locku *locku
+	),
+	TP_ARGS(resp, locku),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&locku->lu_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
 	)
 );
 

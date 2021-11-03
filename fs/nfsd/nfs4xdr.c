@@ -1009,6 +1009,7 @@ nfsd4_decode_locku(struct nfsd4_compoundargs *argp, struct nfsd4_locku *locku)
 	if (xdr_stream_decode_u64(argp->xdr, &locku->lu_length) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_locku4args(argp, locku);
 	return nfs_ok;
 }
 
@@ -4006,8 +4007,14 @@ static __be32
 nfsd4_encode_locku(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_locku *locku)
 {
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_encode_stateid(xdr, &locku->lu_stateid);
+	status = nfsd4_encode_stateid(xdr, &locku->lu_stateid);
+	if (status)
+		return status;
+
+	trace_enc_locku4resok(resp, locku);
+	return nfs_ok;
 }
 
 
