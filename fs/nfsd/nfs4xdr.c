@@ -854,10 +854,17 @@ nfsd4_decode_create(struct nfsd4_compoundargs *argp, struct nfsd4_create *create
 	return nfs_ok;
 }
 
-static inline __be32
+static __be32
 nfsd4_decode_delegreturn(struct nfsd4_compoundargs *argp, struct nfsd4_delegreturn *dr)
 {
-	return nfsd4_decode_stateid4(argp, &dr->dr_stateid);
+	__be32 status;
+
+	status = nfsd4_decode_stateid4(argp, &dr->dr_stateid);
+	if (status)
+		return status;
+
+	trace_dec_delegreturn4args(argp, dr);
+	return nfs_ok;
 }
 
 static inline __be32
@@ -3768,6 +3775,13 @@ nfsd4_encode_create(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_
 }
 
 static __be32
+nfsd4_encode_delegreturn(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_delegreturn4resok(resp);
+	return nfserr;
+}
+
+static __be32
 nfsd4_encode_getattr(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_getattr *getattr)
 {
 	struct svc_fh *fhp = getattr->ga_fhp;
@@ -5320,7 +5334,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_COMMIT]		= (nfsd4_enc)nfsd4_encode_commit,
 	[OP_CREATE]		= (nfsd4_enc)nfsd4_encode_create,
 	[OP_DELEGPURGE]		= (nfsd4_enc)nfsd4_encode_noop,
-	[OP_DELEGRETURN]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_DELEGRETURN]	= (nfsd4_enc)nfsd4_encode_delegreturn,
 	[OP_GETATTR]		= (nfsd4_enc)nfsd4_encode_getattr,
 	[OP_GETFH]		= (nfsd4_enc)nfsd4_encode_getfh,
 	[OP_LINK]		= (nfsd4_enc)nfsd4_encode_link,
