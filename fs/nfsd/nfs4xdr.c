@@ -781,9 +781,16 @@ nfsd4_decode_access(struct nfsd4_compoundargs *argp,
 static __be32
 nfsd4_decode_close(struct nfsd4_compoundargs *argp, struct nfsd4_close *close)
 {
+	__be32 status;
+
 	if (xdr_stream_decode_u32(argp->xdr, &close->cl_seqid) < 0)
 		return nfserr_bad_xdr;
-	return nfsd4_decode_stateid4(argp, &close->cl_stateid);
+	status = nfsd4_decode_stateid4(argp, &close->cl_stateid);
+	if (status)
+		return status;
+
+	trace_dec_close4args(argp, close);
+	return nfs_ok;
 }
 
 
@@ -3694,8 +3701,14 @@ static __be32
 nfsd4_encode_close(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_close *close)
 {
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_encode_stateid(xdr, &close->cl_stateid);
+	status = nfsd4_encode_stateid(xdr, &close->cl_stateid);
+	if (status)
+		return status;
+
+	trace_enc_close4resok(resp, close);
+	return nfs_ok;
 }
 
 
