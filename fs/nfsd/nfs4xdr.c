@@ -850,6 +850,7 @@ nfsd4_decode_create(struct nfsd4_compoundargs *argp, struct nfsd4_create *create
 	if (status)
 		return status;
 
+	trace_dec_create4args(argp, create);
 	return nfs_ok;
 }
 
@@ -3740,14 +3741,19 @@ static __be32
 nfsd4_encode_create(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_create *create)
 {
 	struct xdr_stream *xdr = resp->xdr;
-	__be32 *p;
+	__be32 *p, status;
 
 	p = xdr_reserve_space(xdr, 20);
 	if (!p)
 		return nfserr_resource;
 	encode_cinfo(p, &create->cr_cinfo);
-	return nfsd4_encode_bitmap(xdr, create->cr_bmval[0],
-			create->cr_bmval[1], create->cr_bmval[2]);
+	status = nfsd4_encode_bitmap(xdr, create->cr_bmval[0],
+				     create->cr_bmval[1], create->cr_bmval[2]);
+	if (status)
+		return status;
+
+	trace_enc_create4resok(resp, create);
+	return nfs_ok;
 }
 
 static __be32

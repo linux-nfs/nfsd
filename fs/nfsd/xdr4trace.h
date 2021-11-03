@@ -44,6 +44,45 @@
 #define TRACE_XDR_CMPD_VARARGS \
 		__entry->xid, __entry->cur_op, __entry->opcnt
 
+#define TRACE_NFS4_BITMAP_FIELDS \
+		__field(unsigned long, word0) \
+		__field(unsigned long, word1) \
+		__field(unsigned long, word2)
+
+#define TRACE_NFS4_BITMAP_ASSIGNS(b) \
+		do { \
+			__entry->word0 = (b)[0]; \
+			__entry->word1 = (b)[1]; \
+			__entry->word2 = (b)[2]; \
+		} while (0)
+
+#define TRACE_NFS4_BITMAP_FORMAT \
+		"word0=%s word1=%s word2=%s "
+
+#define TRACE_NFS4_BITMAP_VARARGS \
+		show_nfs4_fattr4_bm_word0(__entry->word0), \
+		show_nfs4_fattr4_bm_word1(__entry->word1), \
+		show_nfs4_fattr4_bm_word2(__entry->word2)
+
+#define TRACE_NFS4_CINFO_FIELDS \
+		__field(bool, atomic) \
+		__field(u64, before) \
+		__field(u64, after)
+
+#define TRACE_NFS4_CINFO_ASSIGNS(c) \
+		do { \
+			__entry->atomic = !!(c).atomic; \
+			__entry->before = (c).before_change; \
+			__entry->after = (c).after_change; \
+		} while (0)
+
+#define TRACE_NFS4_CINFO_FORMAT \
+		"cinfo-delta=%llu%s "
+
+#define TRACE_NFS4_CINFO_VARARGS \
+		(__entry->after - __entry->before), \
+		(__entry->atomic ? " (atomic)" : "")
+
 #define TRACE_NFS4_STATEID_FIELDS \
 		__field(u32, cl_boot) \
 		__field(u32, cl_id) \
@@ -501,6 +540,30 @@ TRACE_EVENT(dec_copy_notify4args,
 	)
 );
 
+TRACE_EVENT(dec_create4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_create *create
+	),
+	TP_ARGS(argp, create),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, type)
+		__string_len(name, name, create->cr_namelen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->type = create->cr_type;
+		__assign_str_len(name, create->cr_name, create->cr_namelen);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "name=%s type=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__get_str(name), show_nfs4_file_type(__entry->type)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -651,6 +714,29 @@ TRACE_EVENT(enc_copy_notify4resok,
 		"lease_time=[%llx, %x]",
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
 		__entry->lease_sec, __entry->lease_nsec
+	)
+);
+
+TRACE_EVENT(enc_create4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_create *create
+	),
+	TP_ARGS(resp, create),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CINFO_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_CINFO_ASSIGNS(create->cr_cinfo);
+		TRACE_NFS4_BITMAP_ASSIGNS(create->cr_bmval);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CINFO_FORMAT
+		TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CINFO_VARARGS,
+		TRACE_NFS4_BITMAP_VARARGS
 	)
 );
 
