@@ -970,6 +970,8 @@ nfsd4_decode_lock(struct nfsd4_compoundargs *argp, struct nfsd4_lock *lock)
 static __be32
 nfsd4_decode_lockt(struct nfsd4_compoundargs *argp, struct nfsd4_lockt *lockt)
 {
+	__be32 status;
+
 	memset(lockt, 0, sizeof(*lockt));
 	if (xdr_stream_decode_u32(argp->xdr, &lockt->lt_type) < 0)
 		return nfserr_bad_xdr;
@@ -979,8 +981,13 @@ nfsd4_decode_lockt(struct nfsd4_compoundargs *argp, struct nfsd4_lockt *lockt)
 		return nfserr_bad_xdr;
 	if (xdr_stream_decode_u64(argp->xdr, &lockt->lt_length) < 0)
 		return nfserr_bad_xdr;
-	return nfsd4_decode_state_owner4(argp, &lockt->lt_clientid,
-					 &lockt->lt_owner);
+	status = nfsd4_decode_state_owner4(argp, &lockt->lt_clientid,
+					   &lockt->lt_owner);
+	if (status)
+		return status;
+
+	trace_dec_lockt4args(argp, lockt);
+	return nfs_ok;
 }
 
 static __be32
@@ -3986,8 +3993,12 @@ nfsd4_encode_lockt(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_l
 {
 	struct xdr_stream *xdr = resp->xdr;
 
-	if (nfserr == nfserr_denied)
-		nfsd4_encode_lock_denied(xdr, &lockt->lt_denied);
+	if (!nfserr)
+		trace_enc_lockt4resok(resp, lockt);
+	else if (nfserr == nfserr_denied) {
+		nfserr = nfsd4_encode_lock_denied(xdr, &lockt->lt_denied);
+		trace_enc_lockt4resdenied(resp, nfserr, &lockt->lt_denied);
+	}
 	return nfserr;
 }
 

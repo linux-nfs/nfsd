@@ -1116,6 +1116,34 @@ TRACE_EVENT(dec_exist_lock_owner4,
 	)
 );
 
+TRACE_EVENT(dec_lockt4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_lockt *lockt
+	),
+	TP_ARGS(argp, lockt),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, type)
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->type = lockt->lt_type;
+		__entry->offset = lockt->lt_offset;
+		__entry->length = lockt->lt_length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"type=%s offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_lock_type(__entry->type), __entry->offset,
+		__entry->length
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1595,6 +1623,63 @@ TRACE_EVENT_CONDITION(enc_lock4resdenied,
 		__entry->start, __entry->length
 	)
 );
+
+TRACE_EVENT(enc_lockt4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_lockt *lockt
+	),
+	TP_ARGS(resp, lockt),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT, TRACE_XDR_CMPD_VARARGS
+	)
+);
+
+TRACE_EVENT_CONDITION(enc_lockt4resdenied,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		__be32 nfserr,
+		const struct nfsd4_lock_denied *ld
+	),
+	TP_ARGS(resp, nfserr, ld),
+	TP_CONDITION(nfserr == nfserr_denied),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+
+		__string_len(owner, owner, ld->ld_owner.len)
+		__field(unsigned long, type)
+		__field(u64, start)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->type = ld->ld_type;
+		__entry->start = ld->ld_start;
+		__entry->length = ld->ld_length;
+		if (ld->ld_owner.len) {
+			TRACE_NFS4_CLID_ASSIGNS(ld->ld_clientid);
+			__assign_str_len(owner, ld->ld_owner.data,
+					 ld->ld_owner.len);
+		} else {
+			__entry->cl_boot = 0;
+			__entry->cl_id = 0;
+		}
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT
+		"owner=%s type=%s start=%llu offset=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		__get_str(owner), show_nfs4_lock_type(__entry->type),
+		__entry->start, __entry->length
+	)
+);
+
 
 /**
  ** FATTR4 tracepoints
