@@ -65,6 +65,17 @@
 		__entry->cl_boot, __entry->cl_id, \
 		__entry->si_id, __entry->si_generation
 
+#define TRACE_NFS4_VERIFIER_FIELD \
+		__array(u8, verifier, NFS4_VERIFIER_SIZE)
+
+#define TRACE_NFS4_VERIFIER_ASSIGN(verf) \
+		memcpy(__entry->verifier, (verf).data, NFS4_VERIFIER_SIZE)
+
+#define TRACE_NFS4_VERIFIER_FORMAT \
+		"verifier=%s "
+
+#define TRACE_NFS4_VERIFIER_VARARG \
+		show_nfs4_verifier(__entry->verifier)
 
 /**
  ** Event classes
@@ -390,6 +401,29 @@ TRACE_EVENT(dec_close4args,
 	)
 );
 
+TRACE_EVENT(dec_commit4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_commit *commit
+	),
+	TP_ARGS(argp, commit),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, offset)
+		__field(u32, count)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->offset = commit->co_offset;
+		__entry->count = commit->co_count;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "offset=%llu count=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->offset, __entry->count
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -462,6 +496,25 @@ TRACE_EVENT(enc_close4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_commit4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_commit *commit
+	),
+	TP_ARGS(resp, commit),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_VERIFIER_ASSIGN(commit->co_verf);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_VERIFIER_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_VERIFIER_VARARG
 	)
 );
 

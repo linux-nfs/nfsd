@@ -802,6 +802,8 @@ nfsd4_decode_commit(struct nfsd4_compoundargs *argp, struct nfsd4_commit *commit
 	if (xdr_stream_decode_u32(argp->xdr, &commit->co_count) < 0)
 		return nfserr_bad_xdr;
 	memset(&commit->co_verf, 0, sizeof(commit->co_verf));
+
+	trace_dec_commit4args(argp, commit);
 	return nfs_ok;
 }
 
@@ -3723,7 +3725,9 @@ nfsd4_encode_commit(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_
 		return nfserr_resource;
 	p = xdr_encode_opaque_fixed(p, commit->co_verf.data,
 						NFS4_VERIFIER_SIZE);
-	return 0;
+
+	trace_enc_commit4resok(resp, commit);
+	return nfs_ok;
 }
 
 static __be32
