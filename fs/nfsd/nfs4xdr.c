@@ -2556,14 +2556,20 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 	return true;
 }
 
-static __be32 *encode_change(__be32 *p, struct kstat *stat, struct inode *inode,
-			     struct svc_export *exp)
+static __be32 *
+encode_change(struct nfsd4_compoundres *resp, __be32 *p, struct kstat *stat,
+	      struct inode *inode, struct svc_export *exp)
 {
+	u64 change;
+
 	if (exp->ex_flags & NFSEXP_V4ROOT) {
 		*p++ = cpu_to_be32(convert_to_wallclock(exp->cd->flush_time));
 		*p++ = 0;
-	} else
-		p = xdr_encode_hyper(p, nfsd4_change_attribute(stat, inode));
+	} else {
+		change = nfsd4_change_attribute(stat, inode);
+		p = xdr_encode_hyper(p, change);
+		trace_enc_fattr4_change(resp, change);
+	}
 	return p;
 }
 
@@ -2578,7 +2584,8 @@ static __be32 *encode_change(__be32 *p, struct kstat *stat, struct inode *inode,
  * of the time returned from current_time() (which I'm assuming to be
  * 1/HZ).
  */
-static __be32 *encode_time_delta(__be32 *p, struct inode *inode)
+static __be32 *encode_time_delta(struct nfsd4_compoundres *resp, __be32 *p,
+				 struct inode *inode)
 {
 	struct timespec64 ts;
 	u32 ns;
@@ -2589,6 +2596,7 @@ static __be32 *encode_time_delta(__be32 *p, struct inode *inode)
 	p = xdr_encode_hyper(p, ts.tv_sec);
 	*p++ = cpu_to_be32(ts.tv_nsec);
 
+	trace_enc_fattr4_time_delta(resp, &ts);
 	return p;
 }
 
@@ -3081,6 +3089,7 @@ nfsd4_encode_fattr(struct xdr_stream *xdr, struct svc_fh *fhp,
 			*p++ = cpu_to_be32(supp[1]);
 			*p++ = cpu_to_be32(supp[2]);
 		}
+		trace_enc_fattr4_supported_attrs(resp, supp);
 	}
 	if (bmval0 & FATTR4_WORD0_TYPE) {
 		p = xdr_reserve_space(xdr, 4);
@@ -3092,28 +3101,30 @@ nfsd4_encode_fattr(struct xdr_stream *xdr, struct svc_fh *fhp,
 			goto out;
 		}
 		*p++ = cpu_to_be32(dummy);
+		trace_enc_fattr4_type(resp, dummy);
 	}
 	if (bmval0 & FATTR4_WORD0_FH_EXPIRE_TYPE) {
 		p = xdr_reserve_space(xdr, 4);
 		if (!p)
 			goto out_resource;
-		if (exp->ex_flags & NFSEXP_NOSUBTREECHECK)
-			*p++ = cpu_to_be32(NFS4_FH_PERSISTENT);
-		else
-			*p++ = cpu_to_be32(NFS4_FH_PERSISTENT|
-						NFS4_FH_VOL_RENAME);
+		dummy = NFS4_FH_PERSISTENT;
+		if (!(exp->ex_flags & NFSEXP_NOSUBTREECHECK))
+			dummy |= NFS4_FH_VOL_RENAME;
+		*p++ = cpu_to_be32(dummy);
+		trace_enc_fattr4_fh_expire_type(resp, dummy);
 	}
 	if (bmval0 & FATTR4_WORD0_CHANGE) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
-		p = encode_change(p, &stat, d_inode(dentry), exp);
+		p = encode_change(resp, p, &stat, d_inode(dentry), exp);
 	}
 	if (bmval0 & FATTR4_WORD0_SIZE) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, stat.size);
+		trace_enc_fattr4_size(resp, stat.size);
 	}
 	if (bmval0 & FATTR4_WORD0_LINK_SUPPORT) {
 		p = xdr_reserve_space(xdr, 4);
@@ -3134,9 +3145,12 @@ nfsd4_encode_fattr(struct xdr_stream *xdr, struct svc_fh *fhp,
 		*p++ = cpu_to_be32(0);
 	}
 	if (bmval0 & FATTR4_WORD0_FSID) {
+		__be32 *fsid;
+
 		p = xdr_reserve_space(xdr, 16);
 		if (!p)
 			goto out_resource;
+		fsid = p;
 		if (exp->ex_fslocs.migrated) {
 			p = xdr_encode_hyper(p, NFS4_REFERRAL_FSID_MAJOR);
 			p = xdr_encode_hyper(p, NFS4_REFERRAL_FSID_MINOR);
@@ -3156,6 +3170,7 @@ nfsd4_encode_fattr(struct xdr_stream *xdr, struct svc_fh *fhp,
 								EX_UUID_LEN);
 			break;
 		}
+		trace_enc_fattr4_fsid(resp, fsid);
 	}
 	if (bmval0 & FATTR4_WORD0_UNIQUE_HANDLES) {
 		p = xdr_reserve_space(xdr, 4);
@@ -3168,12 +3183,14 @@ nfsd4_encode_fattr(struct xdr_stream *xdr, struct svc_fh *fhp,
 		if (!p)
 			goto out_resource;
 		*p++ = cpu_to_be32(nn->nfsd4_lease);
+		trace_enc_fattr4_lease_time(resp, nn->nfsd4_lease);
 	}
 	if (bmval0 & FATTR4_WORD0_RDATTR_ERROR) {
 		p = xdr_reserve_space(xdr, 4);
 		if (!p)
 			goto out_resource;
 		*p++ = cpu_to_be32(rdattr_err);
+		trace_enc_fattr4_rdattr_err(resp, rdattr_err);
 	}
 	if (bmval0 & FATTR4_WORD0_ACL) {
 		struct nfs4_ace *ace;
@@ -3202,6 +3219,7 @@ nfsd4_encode_fattr(struct xdr_stream *xdr, struct svc_fh *fhp,
 			status = nfsd4_encode_aclname(xdr, rqstp, ace);
 			if (status)
 				goto out;
+			trace_enc_fattr4_ace(resp, ace);
 		}
 	}
 out_acl:
@@ -3209,8 +3227,10 @@ out_acl:
 		p = xdr_reserve_space(xdr, 4);
 		if (!p)
 			goto out_resource;
-		*p++ = cpu_to_be32(IS_POSIXACL(dentry->d_inode) ?
-			ACL4_SUPPORT_ALLOW_ACL|ACL4_SUPPORT_DENY_ACL : 0);
+		dummy = IS_POSIXACL(dentry->d_inode) ?
+				ACL4_SUPPORT_ALLOW_ACL|ACL4_SUPPORT_DENY_ACL : 0;
+		*p++ = cpu_to_be32(dummy);
+		trace_enc_fattr4_aclsupport(resp, dummy);
 	}
 	if (bmval0 & FATTR4_WORD0_CANSETTIME) {
 		p = xdr_reserve_space(xdr, 4);
@@ -3242,30 +3262,35 @@ out_acl:
 			goto out_resource;
 		p = xdr_encode_opaque(p, &fhp->fh_handle.fh_raw,
 					fhp->fh_handle.fh_size);
+		trace_enc_fattr4_filehandle(resp, fhp);
 	}
 	if (bmval0 & FATTR4_WORD0_FILEID) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, stat.ino);
+		trace_enc_fattr4_fileid(resp, stat.ino);
 	}
 	if (bmval0 & FATTR4_WORD0_FILES_AVAIL) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, (u64) statfs.f_ffree);
+		trace_enc_fattr4_files_avail(resp, statfs.f_ffree);
 	}
 	if (bmval0 & FATTR4_WORD0_FILES_FREE) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, (u64) statfs.f_ffree);
+		trace_enc_fattr4_files_free(resp, statfs.f_ffree);
 	}
 	if (bmval0 & FATTR4_WORD0_FILES_TOTAL) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, (u64) statfs.f_files);
+		trace_enc_fattr4_files_total(resp, statfs.f_files);
 	}
 	if (bmval0 & FATTR4_WORD0_FS_LOCATIONS) {
 		status = nfsd4_encode_fs_locations(xdr, rqstp, exp);
@@ -3283,6 +3308,8 @@ out_acl:
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, exp->ex_path.mnt->mnt_sb->s_maxbytes);
+		trace_enc_fattr4_maxfilesize(resp,
+					exp->ex_path.mnt->mnt_sb->s_maxbytes);
 	}
 	if (bmval0 & FATTR4_WORD0_MAXLINK) {
 		p = xdr_reserve_space(xdr, 4);
@@ -3295,24 +3322,28 @@ out_acl:
 		if (!p)
 			goto out_resource;
 		*p++ = cpu_to_be32(statfs.f_namelen);
+		trace_enc_fattr4_maxname(resp, statfs.f_namelen);
 	}
 	if (bmval0 & FATTR4_WORD0_MAXREAD) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, (u64) svc_max_payload(rqstp));
+		trace_enc_fattr4_maxread(resp, svc_max_payload(rqstp));
 	}
 	if (bmval0 & FATTR4_WORD0_MAXWRITE) {
 		p = xdr_reserve_space(xdr, 8);
 		if (!p)
 			goto out_resource;
 		p = xdr_encode_hyper(p, (u64) svc_max_payload(rqstp));
+		trace_enc_fattr4_maxwrite(resp, svc_max_payload(rqstp));
 	}
 	if (bmval1 & FATTR4_WORD1_MODE) {
 		p = xdr_reserve_space(xdr, 4);
 		if (!p)
 			goto out_resource;
 		*p++ = cpu_to_be32(stat.mode & S_IALLUGO);
+		trace_enc_fattr4_mode(resp, stat.mode & S_IALLUGO);
 	}
 	if (bmval1 & FATTR4_WORD1_NO_TRUNC) {
 		p = xdr_reserve_space(xdr, 4);
@@ -3325,16 +3356,19 @@ out_acl:
 		if (!p)
 			goto out_resource;
 		*p++ = cpu_to_be32(stat.nlink);
+		trace_enc_fattr4_numlinks(resp, stat.nlink);
 	}
 	if (bmval1 & FATTR4_WORD1_OWNER) {
 		status = nfsd4_encode_user(xdr, rqstp, stat.uid);
 		if (status)
 			goto out;
+		trace_enc_fattr4_owner(resp, stat.uid);
 	}
 	if (bmval1 & FATTR4_WORD1_OWNER_GROUP) {
 		status = nfsd4_encode_group(xdr, rqstp, stat.gid);
 		if (status)
 			goto out;
+		trace_enc_fattr4_group(resp, stat.gid);
 	}
 	if (bmval1 & FATTR4_WORD1_RAWDEV) {
 		p = xdr_reserve_space(xdr, 8);
@@ -3342,6 +3376,7 @@ out_acl:
 			goto out_resource;
 		*p++ = cpu_to_be32((u32) MAJOR(stat.rdev));
 		*p++ = cpu_to_be32((u32) MINOR(stat.rdev));
+		trace_enc_fattr4_rawdev(resp, stat.rdev);
 	}
 	if (bmval1 & FATTR4_WORD1_SPACE_AVAIL) {
 		p = xdr_reserve_space(xdr, 8);
@@ -3349,6 +3384,7 @@ out_acl:
 			goto out_resource;
 		dummy64 = (u64)statfs.f_bavail * (u64)statfs.f_bsize;
 		p = xdr_encode_hyper(p, dummy64);
+		trace_enc_fattr4_space_avail(resp, dummy64);
 	}
 	if (bmval1 & FATTR4_WORD1_SPACE_FREE) {
 		p = xdr_reserve_space(xdr, 8);
@@ -3356,6 +3392,7 @@ out_acl:
 			goto out_resource;
 		dummy64 = (u64)statfs.f_bfree * (u64)statfs.f_bsize;
 		p = xdr_encode_hyper(p, dummy64);
+		trace_enc_fattr4_space_free(resp, dummy64);
 	}
 	if (bmval1 & FATTR4_WORD1_SPACE_TOTAL) {
 		p = xdr_reserve_space(xdr, 8);
@@ -3363,6 +3400,7 @@ out_acl:
 			goto out_resource;
 		dummy64 = (u64)statfs.f_blocks * (u64)statfs.f_bsize;
 		p = xdr_encode_hyper(p, dummy64);
+		trace_enc_fattr4_space_total(resp, dummy64);
 	}
 	if (bmval1 & FATTR4_WORD1_SPACE_USED) {
 		p = xdr_reserve_space(xdr, 8);
@@ -3370,6 +3408,7 @@ out_acl:
 			goto out_resource;
 		dummy64 = (u64)stat.blocks << 9;
 		p = xdr_encode_hyper(p, dummy64);
+		trace_enc_fattr4_space_used(resp, dummy64);
 	}
 	if (bmval1 & FATTR4_WORD1_TIME_ACCESS) {
 		p = xdr_reserve_space(xdr, 12);
@@ -3377,12 +3416,13 @@ out_acl:
 			goto out_resource;
 		p = xdr_encode_hyper(p, (s64)stat.atime.tv_sec);
 		*p++ = cpu_to_be32(stat.atime.tv_nsec);
+		trace_enc_fattr4_time_access(resp, &stat.atime);
 	}
 	if (bmval1 & FATTR4_WORD1_TIME_DELTA) {
 		p = xdr_reserve_space(xdr, 12);
 		if (!p)
 			goto out_resource;
-		p = encode_time_delta(p, d_inode(dentry));
+		p = encode_time_delta(resp, p, d_inode(dentry));
 	}
 	if (bmval1 & FATTR4_WORD1_TIME_METADATA) {
 		p = xdr_reserve_space(xdr, 12);
@@ -3390,6 +3430,7 @@ out_acl:
 			goto out_resource;
 		p = xdr_encode_hyper(p, (s64)stat.ctime.tv_sec);
 		*p++ = cpu_to_be32(stat.ctime.tv_nsec);
+		trace_enc_fattr4_time_metadata(resp, &stat.ctime);
 	}
 	if (bmval1 & FATTR4_WORD1_TIME_MODIFY) {
 		p = xdr_reserve_space(xdr, 12);
@@ -3397,6 +3438,7 @@ out_acl:
 			goto out_resource;
 		p = xdr_encode_hyper(p, (s64)stat.mtime.tv_sec);
 		*p++ = cpu_to_be32(stat.mtime.tv_nsec);
+		trace_enc_fattr4_time_modify(resp, &stat.mtime);
 	}
 	if (bmval1 & FATTR4_WORD1_TIME_CREATE) {
 		p = xdr_reserve_space(xdr, 12);
@@ -3423,6 +3465,7 @@ out_acl:
 				goto out_nfserr;
 		}
 		p = xdr_encode_hyper(p, ino);
+		trace_enc_fattr4_mounted_on_fileid(resp, ino);
 	}
 #ifdef CONFIG_NFSD_PNFS
 	if (bmval1 & FATTR4_WORD1_FS_LAYOUT_TYPES) {
@@ -3455,6 +3498,7 @@ out_acl:
 		status = nfsd4_encode_bitmap(xdr, supp[0], supp[1], supp[2]);
 		if (status)
 			goto out;
+		trace_enc_fattr4_suppattr_exclcreat(resp, supp);
 	}
 
 #ifdef CONFIG_NFSD_V4_SECURITY_LABEL
@@ -3473,6 +3517,7 @@ out_acl:
 		err = xattr_supported_namespace(d_inode(dentry),
 						XATTR_USER_PREFIX);
 		*p++ = cpu_to_be32(err == 0);
+		trace_enc_fattr4_xattr_support(resp, err == 0);
 	}
 
 	*attrlen_p = cpu_to_be32(xdr->buf->len - attrlen_offset - XDR_UNIT);

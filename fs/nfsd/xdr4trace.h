@@ -166,6 +166,83 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_clientid4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_session4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_free_stateid4resok);
 
+DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u64 value
+	),
+	TP_ARGS(resp, value),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, value)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->value = value;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "%llu",
+		TRACE_XDR_CMPD_VARARGS, __entry->value
+	)
+);
+#define DEFINE_SVC_XDR_ENC_U64_EVENT(name) \
+DEFINE_EVENT(svc_xdr_enc_u64_class, name, \
+	TP_PROTO( \
+		const struct nfsd4_compoundres *resp, \
+		u64 value \
+	), \
+	TP_ARGS(resp, value))
+
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_change);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_size);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_files_avail);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_files_free);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_files_total);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_maxfilesize);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_maxread);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_maxwrite);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_space_avail);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_space_free);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_space_total);
+DEFINE_SVC_XDR_ENC_U64_EVENT(enc_fattr4_space_used);
+
+DECLARE_EVENT_CLASS(svc_xdr_enc_time4_class,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct timespec64 *time
+	),
+	TP_ARGS(resp, time),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(s64, time_sec)
+		__field(long, time_nsec)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->time_sec = time->tv_sec;
+		__entry->time_nsec = time->tv_nsec;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "time=[%llx, %lx]",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->time_sec, __entry->time_nsec
+	)
+);
+#define DEFINE_SVC_XDR_ENC_TIME4_EVENT(name) \
+DEFINE_EVENT(svc_xdr_enc_time4_class, name, \
+	TP_PROTO( \
+		const struct nfsd4_compoundres *resp, \
+		const struct timespec64 *time \
+	), \
+	TP_ARGS(resp, time))
+
+DEFINE_SVC_XDR_ENC_TIME4_EVENT(enc_fattr4_time_access);
+DEFINE_SVC_XDR_ENC_TIME4_EVENT(enc_fattr4_time_delta);
+DEFINE_SVC_XDR_ENC_TIME4_EVENT(enc_fattr4_time_metadata);
+DEFINE_SVC_XDR_ENC_TIME4_EVENT(enc_fattr4_time_modify);
+
 
 /**
  ** Error reports
@@ -1035,4 +1112,420 @@ TRACE_EVENT(enc_exchange_id4resok,
 /**
  ** FATTR4 tracepoints
  **/
+
+TRACE_EVENT(enc_fattr4_supported_attrs,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const u32 *supp
+	),
+	TP_ARGS(resp, supp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_BITMAP_ASSIGNS(supp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_fattr4_type,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 type
+	),
+	TP_ARGS(resp, type),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, type)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->type = type;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "type=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_file_type(__entry->type)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_fh_expire_type,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 fh_expire_type
+	),
+	TP_ARGS(resp, fh_expire_type),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, fh_expire_type)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->fh_expire_type = fh_expire_type;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fh_expire_type=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_fh_expire_type(__entry->fh_expire_type)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_fsid,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const __be32 *fsid
+	),
+	TP_ARGS(resp, fsid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__array(u8, fsid, 16)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		memcpy(__entry->fsid, fsid, 16);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fsid=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__print_hex_str(__entry->fsid, 16)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_lease_time,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 lease_time
+	),
+	TP_ARGS(resp, lease_time),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, lease_time)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->lease_time = lease_time;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "lease_time=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->lease_time
+	)
+);
+
+TRACE_EVENT(enc_fattr4_rdattr_err,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 rdattr_err
+	),
+	TP_ARGS(resp, rdattr_err),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, rdattr_err)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->rdattr_err = rdattr_err;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "rd_attr_err=%s",
+		TRACE_XDR_CMPD_VARARGS, show_nfs4_status(__entry->rdattr_err)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_ace,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfs4_ace *ace
+	),
+	TP_ARGS(resp, ace),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, type)
+		__field(unsigned long, flags)
+		__field(unsigned long, access_mask)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->type = ace->type;
+		__entry->flags = ace->flag;
+		__entry->access_mask = ace->access_mask & NFS4_ACE_MASK_ALL;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "type=%s flags=%s access_mask=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_ace4_access_type(__entry->type),
+		show_nfs4_ace4_flags(__entry->flags),
+		show_nfs4_ace4_access_mask(__entry->access_mask)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_aclsupport,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 aclsupport
+	),
+	TP_ARGS(resp, aclsupport),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, aclsupport)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->aclsupport = aclsupport;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "support=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_aclsupport(__entry->aclsupport)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_filehandle,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const svc_fh *fhp
+	),
+	TP_ARGS(resp, fhp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, fh_hash)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->fh_hash = knfsd_fh_hash(&fhp->fh_handle);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fh_hash=0x%08x",
+		TRACE_XDR_CMPD_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(enc_fattr4_fileid,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u64 fileid
+	),
+	TP_ARGS(resp, fileid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, fileid)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->fileid = fileid;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fileid=%llu",
+		TRACE_XDR_CMPD_VARARGS, __entry->fileid
+	)
+);
+
+TRACE_EVENT(enc_fattr4_maxname,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 maxname
+	),
+	TP_ARGS(resp, maxname),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, maxname)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->maxname = maxname;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "maxname=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->maxname
+	)
+);
+
+TRACE_EVENT(enc_fattr4_mode,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		umode_t mode
+	),
+	TP_ARGS(resp, mode),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, mode)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->mode = mode;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "mode=%lo %s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->mode, show_fs_umode(__entry->mode)
+	)
+);
+
+TRACE_EVENT(enc_fattr4_numlinks,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u32 numlinks
+	),
+	TP_ARGS(resp, numlinks),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, numlinks)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->numlinks = numlinks;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "numlinks=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->numlinks
+	)
+);
+
+TRACE_EVENT(enc_fattr4_owner,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		kuid_t uid
+	),
+	TP_ARGS(resp, uid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, uid)
+	),
+	TP_fast_assign(
+		struct user_namespace *userns =
+				nfsd_user_namespace(resp->rqstp);
+
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->uid = (u32)from_kuid_munged(userns, uid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "uid=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->uid
+	)
+);
+
+TRACE_EVENT(enc_fattr4_group,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		kgid_t gid
+	),
+	TP_ARGS(resp, gid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, gid)
+	),
+	TP_fast_assign(
+		struct user_namespace *userns =
+				nfsd_user_namespace(resp->rqstp);
+
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->gid = (u32)from_kgid_munged(userns, gid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "gid=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->gid
+	)
+);
+
+TRACE_EVENT(enc_fattr4_rawdev,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		dev_t rdev
+	),
+	TP_ARGS(resp, rdev),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, major)
+		__field(u32, minor)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->major = (u32)MAJOR(rdev);
+		__entry->minor = (u32)MINOR(rdev);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "rdev=(%u, %u)",
+		TRACE_XDR_CMPD_VARARGS, __entry->major, __entry->minor
+	)
+);
+
+TRACE_EVENT(enc_fattr4_mounted_on_fileid,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		u64 fileid
+	),
+	TP_ARGS(resp, fileid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, fileid)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->fileid = fileid;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fileid=%llu",
+		TRACE_XDR_CMPD_VARARGS, __entry->fileid
+	)
+);
+
+TRACE_EVENT(enc_fattr4_suppattr_exclcreat,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const u32 *supp
+	),
+	TP_ARGS(resp, supp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_BITMAP_ASSIGNS(supp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_fattr4_xattr_support,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		bool supported
+	),
+	TP_ARGS(resp, supported),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(bool, supported)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->supported = supported;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "xattrs %ssupported",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->supported ? "" : "un"
+	)
+);
 
