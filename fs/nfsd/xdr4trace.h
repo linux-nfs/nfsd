@@ -185,10 +185,57 @@ TRACE_EVENT_CONDITION(nfsd_compound_encode_err,
  ** Server-side argument decoding tracepoints
  **/
 
+TRACE_EVENT(dec_access4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_access *access
+	),
+	TP_ARGS(argp, access),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, access)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->access = access->ac_req_access;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "access=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs3_access_flags(__entry->access)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
  **/
+
+TRACE_EVENT(enc_access4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_access *access
+	),
+	TP_ARGS(resp, access),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, access)
+		__field(unsigned long, supported)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->access = access->ac_resp_access;
+		__entry->supported = access->ac_supported;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "access=%s supported=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs3_access_flags(__entry->access),
+		show_nfs3_access_flags(__entry->supported)
+	)
+);
 
 
 /**

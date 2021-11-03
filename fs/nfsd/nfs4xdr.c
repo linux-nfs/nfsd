@@ -774,6 +774,7 @@ nfsd4_decode_access(struct nfsd4_compoundargs *argp,
 {
 	if (xdr_stream_decode_u32(argp->xdr, &access->ac_req_access) < 0)
 		return nfserr_bad_xdr;
+	trace_dec_access4args(argp, access);
 	return nfs_ok;
 }
 
@@ -3635,7 +3636,9 @@ nfsd4_encode_access(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_
 		return nfserr_resource;
 	*p++ = cpu_to_be32(access->ac_supported);
 	*p++ = cpu_to_be32(access->ac_resp_access);
-	return 0;
+
+	trace_enc_access4resok(resp, access);
+	return nfs_ok;
 }
 
 static __be32 nfsd4_encode_bind_conn_to_session(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_bind_conn_to_session *bcts)
