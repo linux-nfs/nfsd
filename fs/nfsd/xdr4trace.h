@@ -1393,6 +1393,31 @@ TRACE_EVENT(dec_open4args,
 	)
 );
 
+TRACE_EVENT(dec_open_confirm4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open_confirm *oc
+	),
+	TP_ARGS(argp, oc),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u32, seqid)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&oc->oc_req_stateid);
+
+		__entry->seqid = oc->oc_seqid;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"seqid=%u",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->seqid
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2069,6 +2094,25 @@ TRACE_EVENT(enc_open4resok,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
 		TRACE_NFS4_CINFO_VARARGS, TRACE_NFS4_BITMAP_VARARGS,
 		show_nfs4_open_result(__entry->rflags)
+	)
+);
+
+TRACE_EVENT(enc_open_confirm4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_open_confirm *oc
+	),
+	TP_ARGS(resp, oc),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&oc->oc_resp_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
 	)
 );
 

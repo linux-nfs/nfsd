@@ -1263,6 +1263,7 @@ nfsd4_decode_open_confirm(struct nfsd4_compoundargs *argp, struct nfsd4_open_con
 
 	memset(&open_conf->oc_resp_stateid, 0,
 	       sizeof(open_conf->oc_resp_stateid));
+	trace_dec_open_confirm4args(argp, open_conf);
 	return nfs_ok;
 }
 
@@ -4221,8 +4222,14 @@ static __be32
 nfsd4_encode_open_confirm(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_open_confirm *oc)
 {
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_encode_stateid(xdr, &oc->oc_resp_stateid);
+	status = nfsd4_encode_stateid(xdr, &oc->oc_resp_stateid);
+	if (status)
+		return status;
+
+	trace_enc_open_confirm4resok(resp, oc);
+	return nfs_ok;
 }
 
 static __be32
