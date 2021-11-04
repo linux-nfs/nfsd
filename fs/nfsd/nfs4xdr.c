@@ -1477,7 +1477,14 @@ nfsd4_decode_verify_bitmaps(struct nfsd4_compoundargs *argp,
 static __be32
 nfsd4_decode_nverify(struct nfsd4_compoundargs *argp, struct nfsd4_verify *nverify)
 {
-	return nfsd4_decode_verify_bitmaps(argp, nverify);
+	__be32 status;
+
+	status = nfsd4_decode_verify_bitmaps(argp, nverify);
+	if (status)
+		return status;
+
+	trace_dec_nverify4args(argp, nverify);
+	return nfs_ok;
 }
 
 static __be32
@@ -4072,6 +4079,12 @@ nfsd4_encode_link(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_li
 	return nfs_ok;
 }
 
+static __be32
+nfsd4_encode_nverify(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_nverify4resok(resp);
+	return nfs_ok;
+}
 
 static __be32
 nfsd4_encode_open(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_open *open)
@@ -5560,7 +5573,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_LOCKU]		= (nfsd4_enc)nfsd4_encode_locku,
 	[OP_LOOKUP]		= (nfsd4_enc)nfsd4_encode_lookup,
 	[OP_LOOKUPP]		= (nfsd4_enc)nfsd4_encode_lookupp,
-	[OP_NVERIFY]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_NVERIFY]		= (nfsd4_enc)nfsd4_encode_nverify,
 	[OP_OPEN]		= (nfsd4_enc)nfsd4_encode_open,
 	[OP_OPENATTR]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_OPEN_CONFIRM]	= (nfsd4_enc)nfsd4_encode_open_confirm,
