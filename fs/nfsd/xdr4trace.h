@@ -201,6 +201,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putpubfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putrootfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_reclaim_complete4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_release_lockowner4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_renew4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
@@ -1654,6 +1655,25 @@ TRACE_EVENT(dec_rename4args,
 	TP_printk(TRACE_XDR_CMPD_FORMAT "from_name=%s to_name=%s",
 		TRACE_XDR_CMPD_VARARGS,
 		__get_str(from_name), __get_str(to_name)
+	)
+);
+
+TRACE_EVENT(dec_renew4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const clientid_t *clid
+	),
+	TP_ARGS(argp, clid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_CLID_ASSIGNS(*clid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS
 	)
 );
 

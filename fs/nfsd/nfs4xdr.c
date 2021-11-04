@@ -1430,7 +1430,14 @@ nfsd4_decode_rename(struct nfsd4_compoundargs *argp, struct nfsd4_rename *rename
 static __be32
 nfsd4_decode_renew(struct nfsd4_compoundargs *argp, clientid_t *clientid)
 {
-	return nfsd4_decode_clientid4(argp, clientid);
+	__be32 status;
+
+	status = nfsd4_decode_clientid4(argp, clientid);
+	if (status)
+		return status;
+
+	trace_dec_renew4args(argp, clientid);
+	return nfs_ok;
 }
 
 static __be32
@@ -4641,6 +4648,13 @@ nfsd4_encode_rename(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_
 }
 
 static __be32
+nfsd4_encode_renew(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_renew4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_do_encode_secinfo(struct xdr_stream *xdr, struct svc_export *exp)
 {
 	u32 i, nflavs, supported;
@@ -5753,7 +5767,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_READLINK]		= (nfsd4_enc)nfsd4_encode_readlink,
 	[OP_REMOVE]		= (nfsd4_enc)nfsd4_encode_remove,
 	[OP_RENAME]		= (nfsd4_enc)nfsd4_encode_rename,
-	[OP_RENEW]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_RENEW]		= (nfsd4_enc)nfsd4_encode_renew,
 	[OP_RESTOREFH]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_SAVEFH]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_SECINFO]		= (nfsd4_enc)nfsd4_encode_secinfo,
