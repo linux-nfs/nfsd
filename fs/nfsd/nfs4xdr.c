@@ -1539,6 +1539,7 @@ nfsd4_decode_setclientid(struct nfsd4_compoundargs *argp, struct nfsd4_setclient
 	if (xdr_stream_decode_u32(argp->xdr, &setclientid->se_callback_ident) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_setclientid4args(argp, setclientid);
 	return nfs_ok;
 }
 
@@ -4841,6 +4842,7 @@ nfsd4_encode_setclientid(struct nfsd4_compoundres *resp, __be32 nfserr, struct n
 		p = xdr_encode_opaque_fixed(p, &scd->se_clientid, 8);
 		p = xdr_encode_opaque_fixed(p, &scd->se_confirm,
 						NFS4_VERIFIER_SIZE);
+		trace_enc_setclientid4resok(resp, scd);
 	}
 	else if (nfserr == nfserr_clid_inuse) {
 		p = xdr_reserve_space(xdr, 8);

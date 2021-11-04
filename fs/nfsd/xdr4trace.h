@@ -1833,6 +1833,29 @@ TRACE_EVENT(dec_setattr4args,
 	)
 );
 
+/* XXX: More needed */
+TRACE_EVENT(dec_setclientid4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_setclientid *setclid
+	),
+	TP_ARGS(argp, setclid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(clientid, clientid, setclid->se_name.len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(clientid, setclid->se_name.data,
+				 setclid->se_name.len);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "nfs4_clientid=%s",
+		TRACE_XDR_CMPD_VARARGS, __get_str(clientid)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2873,6 +2896,29 @@ TRACE_EVENT(enc_setattr4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_setclientid4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_setclientid *setclid
+	),
+	TP_ARGS(resp, setclid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_CLID_ASSIGNS(setclid->se_clientid);
+		TRACE_NFS4_VERIFIER_ASSIGN(setclid->se_verf);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		TRACE_NFS4_CLID_FORMAT TRACE_NFS4_VERIFIER_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		TRACE_NFS4_VERIFIER_VARARG
 	)
 );
 
