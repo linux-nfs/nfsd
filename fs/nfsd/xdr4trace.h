@@ -230,6 +230,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_release_lockowner4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_renew4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_restorefh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_savefh4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_setclientid_confirm4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
@@ -1853,6 +1854,29 @@ TRACE_EVENT(dec_setclientid4args,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT "nfs4_clientid=%s",
 		TRACE_XDR_CMPD_VARARGS, __get_str(clientid)
+	)
+);
+
+TRACE_EVENT(dec_setclientid_confirm4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_setclientid_confirm *sc
+	),
+	TP_ARGS(argp, sc),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_CLID_ASSIGNS(sc->sc_clientid);
+		TRACE_NFS4_VERIFIER_ASSIGN(sc->sc_confirm);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		TRACE_NFS4_CLID_FORMAT TRACE_NFS4_VERIFIER_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		TRACE_NFS4_VERIFIER_VARARG
 	)
 );
 

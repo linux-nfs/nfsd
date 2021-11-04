@@ -1554,7 +1554,12 @@ nfsd4_decode_setclientid_confirm(struct nfsd4_compoundargs *argp, struct nfsd4_s
 	status = nfsd4_decode_clientid4(argp, &scd_c->sc_clientid);
 	if (status)
 		return status;
-	return nfsd4_decode_verifier4(argp, &scd_c->sc_confirm);
+	status = nfsd4_decode_verifier4(argp, &scd_c->sc_confirm);
+	if (status)
+		return status;
+
+	trace_dec_setclientid_confirm4args(argp, scd_c);
+	return nfs_ok;
 }
 
 static __be32
@@ -4855,6 +4860,14 @@ nfsd4_encode_setclientid(struct nfsd4_compoundres *resp, __be32 nfserr, struct n
 }
 
 static __be32
+nfsd4_encode_setclientid_confirm(struct nfsd4_compoundres *resp, __be32 nfserr,
+				 void *p)
+{
+	trace_enc_setclientid_confirm4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_write(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_write *write)
 {
 	struct xdr_stream *xdr = resp->xdr;
@@ -5838,7 +5851,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_SECINFO]		= (nfsd4_enc)nfsd4_encode_secinfo,
 	[OP_SETATTR]		= (nfsd4_enc)nfsd4_encode_setattr,
 	[OP_SETCLIENTID]	= (nfsd4_enc)nfsd4_encode_setclientid,
-	[OP_SETCLIENTID_CONFIRM] = (nfsd4_enc)nfsd4_encode_noop,
+	[OP_SETCLIENTID_CONFIRM] = (nfsd4_enc)nfsd4_encode_setclientid_confirm,
 	[OP_VERIFY]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_WRITE]		= (nfsd4_enc)nfsd4_encode_write,
 	[OP_RELEASE_LOCKOWNER]	= (nfsd4_enc)nfsd4_encode_release_lockowner,
