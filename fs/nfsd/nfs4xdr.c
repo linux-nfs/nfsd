@@ -1419,7 +1419,12 @@ nfsd4_decode_rename(struct nfsd4_compoundargs *argp, struct nfsd4_rename *rename
 	status = nfsd4_decode_component4(argp, &rename->rn_sname, &rename->rn_snamelen);
 	if (status)
 		return status;
-	return nfsd4_decode_component4(argp, &rename->rn_tname, &rename->rn_tnamelen);
+	status = nfsd4_decode_component4(argp, &rename->rn_tname, &rename->rn_tnamelen);
+	if (status)
+		return status;
+
+	trace_dec_rename4args(argp, rename);
+	return nfs_ok;
 }
 
 static __be32
@@ -4630,7 +4635,9 @@ nfsd4_encode_rename(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_
 		return nfserr_resource;
 	p = encode_cinfo(p, &rename->rn_sinfo);
 	p = encode_cinfo(p, &rename->rn_tinfo);
-	return 0;
+
+	trace_enc_rename4resok(resp, rename);
+	return nfs_ok;
 }
 
 static __be32

@@ -1631,6 +1631,32 @@ TRACE_EVENT(dec_remove4args,
 	)
 );
 
+TRACE_EVENT(dec_rename4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_rename *rename
+	),
+	TP_ARGS(argp, rename),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(from_name, from_name, rename->rn_snamelen + 1)
+		__string_len(to_name, to_name, rename->rn_tnamelen + 1)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(from_name, rename->rn_sname,
+				 rename->rn_snamelen);
+		__assign_str_len(to_name, rename->rn_tname,
+				 rename->rn_tnamelen);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "from_name=%s to_name=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__get_str(from_name), __get_str(to_name)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2521,6 +2547,43 @@ TRACE_EVENT(enc_remove4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CINFO_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CINFO_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_rename4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_rename *rename
+	),
+	TP_ARGS(resp, rename),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(bool, source_atomic)
+		__field(u64, source_before)
+		__field(u64, source_after)
+		__field(bool, target_atomic)
+		__field(u64, target_before)
+		__field(u64, target_after)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->source_atomic = !!rename->rn_sinfo.atomic;
+		__entry->source_before = rename->rn_sinfo.before_change;
+		__entry->source_after = rename->rn_sinfo.after_change;
+		__entry->target_atomic = !!rename->rn_tinfo.atomic;
+		__entry->target_before = rename->rn_tinfo.before_change;
+		__entry->target_after = rename->rn_tinfo.after_change;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"source: before=%llu after=%llu%s "
+		"target: before=%llu after=%llu%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->source_before, __entry->source_after,
+		__entry->source_atomic ? " (atomic)" : "",
+		__entry->target_before, __entry->target_after,
+		__entry->target_atomic ? " (atomic)" : ""
 	)
 );
 
