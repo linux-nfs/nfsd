@@ -1681,6 +1681,27 @@ TRACE_EVENT(dec_renew4args,
 	)
 );
 
+TRACE_EVENT(dec_secinfo4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_secinfo *secinfo
+	),
+	TP_ARGS(argp, secinfo),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(name, name, secinfo->si_namelen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(name, secinfo->si_name, secinfo->si_namelen);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "name=%s",
+		TRACE_XDR_CMPD_VARARGS, __get_str(name)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2608,6 +2629,24 @@ TRACE_EVENT(enc_rename4resok,
 		__entry->source_atomic ? " (atomic)" : "",
 		__entry->target_before, __entry->target_after,
 		__entry->target_atomic ? " (atomic)" : ""
+	)
+);
+
+/* XXX: More needed */
+TRACE_EVENT(enc_secinfo4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_secinfo *secinfo
+	),
+	TP_ARGS(resp, secinfo),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT,
+		TRACE_XDR_CMPD_VARARGS
 	)
 );
 

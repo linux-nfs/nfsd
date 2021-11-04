@@ -1458,8 +1458,16 @@ static __be32
 nfsd4_decode_secinfo(struct nfsd4_compoundargs *argp,
 		     struct nfsd4_secinfo *secinfo)
 {
+	__be32 status;
+
 	secinfo->si_exp = NULL;
-	return nfsd4_decode_component4(argp, &secinfo->si_name, &secinfo->si_namelen);
+	status = nfsd4_decode_component4(argp, &secinfo->si_name,
+					 &secinfo->si_namelen);
+	if (status)
+		return status;
+
+	trace_dec_secinfo4args(argp, secinfo);
+	return nfs_ok;
 }
 
 static __be32
@@ -4749,8 +4757,14 @@ nfsd4_encode_secinfo(struct nfsd4_compoundres *resp, __be32 nfserr,
 		     struct nfsd4_secinfo *secinfo)
 {
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_do_encode_secinfo(xdr, secinfo->si_exp);
+	status = nfsd4_do_encode_secinfo(xdr, secinfo->si_exp);
+	if (status)
+		return status;
+
+	trace_enc_secinfo4resok(resp, secinfo);
+	return nfs_ok;
 }
 
 static __be32
