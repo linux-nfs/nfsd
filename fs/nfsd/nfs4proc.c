@@ -2734,9 +2734,6 @@ encode_op:
 			status = op->status;
 		}
 
-		trace_nfsd_compound_status(args->client_opcnt, resp->opcnt,
-					   status, nfsd4_op_name(op->opnum));
-
 		nfsd4_cstate_clear_replay(cstate);
 		nfsd4_increment_op_stats(op->opnum);
 	}

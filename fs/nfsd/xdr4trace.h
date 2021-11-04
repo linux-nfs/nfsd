@@ -75,6 +75,36 @@
  ** Error reports
  **/
 
+TRACE_EVENT_CONDITION(compound_status,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		const struct nfsd4_op *op
+	),
+	TP_ARGS(rqstp, op),
+	TP_CONDITION(op->status != nfs_ok),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, status)
+		__string(name, nfsd4_op_name(op->opnum))
+	),
+	TP_fast_assign(
+		const struct nfsd4_compoundargs *argp = rqstp->rq_argp;
+		const struct nfsd4_compoundres *resp = rqstp->rq_resp;
+
+		__entry->xid = be32_to_cpu(rqstp->rq_xid);
+		__entry->opcnt = argp->opcnt;
+		__entry->cur_op = resp->opcnt;
+		__entry->minorversion = argp->minorversion;
+		__entry->status = be32_to_cpu(op->status);
+		__assign_str(name, nfsd4_op_name(op->opnum));
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "op=%s status=%s",
+		TRACE_XDR_CMPD_VARARGS, __get_str(name),
+		show_nfs4_status(__entry->status)
+	)
+)
+
 TRACE_EVENT_CONDITION(nfsd_compound_decode_err,
 	TP_PROTO(
 		const struct nfsd4_compoundargs *argp,

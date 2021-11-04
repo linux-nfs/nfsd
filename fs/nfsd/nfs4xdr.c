@@ -5394,6 +5394,7 @@ nfsd4_encode_operation(struct nfsd4_compoundres *resp, struct nfsd4_op *op)
 	}
 status:
 	*p = op->status;
+	trace_compound_status(rqstp, op);
 }
 
 /* 
