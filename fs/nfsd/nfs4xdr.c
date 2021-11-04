@@ -883,6 +883,13 @@ nfsd4_decode_getattr(struct nfsd4_compoundargs *argp, struct nfsd4_getattr *geta
 }
 
 static __be32
+nfsd4_decode_getfh(struct nfsd4_compoundargs *argp, void *p)
+{
+	trace_dec_getfh4args(argp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_link(struct nfsd4_compoundargs *argp, struct nfsd4_link *link)
 {
 	memset(link, 0, sizeof(*link));
@@ -2373,7 +2380,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_DELEGPURGE]		= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_DELEGRETURN]	= (nfsd4_dec)nfsd4_decode_delegreturn,
 	[OP_GETATTR]		= (nfsd4_dec)nfsd4_decode_getattr,
-	[OP_GETFH]		= (nfsd4_dec)nfsd4_decode_noop,
+	[OP_GETFH]		= (nfsd4_dec)nfsd4_decode_getfh,
 	[OP_LINK]		= (nfsd4_dec)nfsd4_decode_link,
 	[OP_LOCK]		= (nfsd4_dec)nfsd4_decode_lock,
 	[OP_LOCKT]		= (nfsd4_dec)nfsd4_decode_lockt,
@@ -3889,6 +3896,8 @@ nfsd4_encode_getfh(struct nfsd4_compoundres *resp, __be32 nfserr, struct svc_fh 
 	if (!p)
 		return nfserr_resource;
 	p = xdr_encode_opaque(p, &fhp->fh_handle.fh_raw, len);
+
+	trace_enc_getfh4resok(resp, fhp);
 	return 0;
 }
 

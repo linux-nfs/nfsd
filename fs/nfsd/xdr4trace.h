@@ -136,6 +136,29 @@
  ** Event classes
  **/
 
+DECLARE_EVENT_CLASS(svc_xdr_noop4args_class,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp
+	),
+	TP_ARGS(argp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT, TRACE_XDR_CMPD_VARARGS
+	)
+);
+#define DEFINE_SVC_XDR_NOOP4ARGS_EVENT(name) \
+DEFINE_EVENT(svc_xdr_noop4args_class, name, \
+	TP_PROTO( \
+		const struct nfsd4_compoundargs *argp \
+	), \
+	TP_ARGS(argp))
+
+DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_getfh4args);
+
 DECLARE_EVENT_CLASS(svc_xdr_noop4res_class,
 	TP_PROTO(
 		const struct nfsd4_compoundres *resp
@@ -1205,6 +1228,27 @@ TRACE_EVENT(enc_getdeviceinfo4resok,
 		TRACE_XDR_CMPD_VARARGS,
 		show_pnfs_layout_type(__entry->layout_type),
 		show_pnfs_notify_types(__entry->notification)
+	)
+);
+
+TRACE_EVENT(enc_getfh4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct svc_fh *fhp
+	),
+	TP_ARGS(resp, fhp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, fh_hash)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->fh_hash = knfsd_fh_hash(&fhp->fh_handle);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fh_hash=0x%08x",
+		TRACE_XDR_CMPD_VARARGS, __entry->fh_hash
 	)
 );
 
