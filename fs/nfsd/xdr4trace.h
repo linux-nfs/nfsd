@@ -1418,6 +1418,33 @@ TRACE_EVENT(dec_open_confirm4args,
 	)
 );
 
+TRACE_EVENT(dec_open_downgrade4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open_downgrade *od
+	),
+	TP_ARGS(argp, od),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u32, seqid)
+		__field(unsigned long, share)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&od->od_stateid);
+
+		__entry->seqid = od->od_seqid;
+		__entry->share = od->od_share_access;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"seqid=%u share=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->seqid, show_nfs4_open_sharedeny_flags(__entry->share)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2110,6 +2137,25 @@ TRACE_EVENT(enc_open_confirm4resok,
 	TP_fast_assign(
 		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
 		TRACE_NFS4_STATEID_ASSIGNS(&oc->oc_resp_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_open_downgrade4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_open_downgrade *od
+	),
+	TP_ARGS(resp, od),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&od->od_stateid);
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS

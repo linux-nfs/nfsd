@@ -1283,7 +1283,12 @@ nfsd4_decode_open_downgrade(struct nfsd4_compoundargs *argp, struct nfsd4_open_d
 					   &open_down->od_deleg_want, NULL);
 	if (status)
 		return status;
-	return nfsd4_decode_share_deny(argp, &open_down->od_share_deny);
+	status = nfsd4_decode_share_deny(argp, &open_down->od_share_deny);
+	if (status)
+		return status;
+
+	trace_dec_open_downgrade4args(argp, open_down);
+	return nfs_ok;
 }
 
 static __be32
@@ -4236,8 +4241,14 @@ static __be32
 nfsd4_encode_open_downgrade(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_open_downgrade *od)
 {
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_encode_stateid(xdr, &od->od_stateid);
+	status = nfsd4_encode_stateid(xdr, &od->od_stateid);
+	if (status)
+		return status;
+
+	trace_enc_open_downgrade4resok(resp, od);
+	return nfs_ok;
 }
 
 static __be32 nfsd4_encode_splice_read(
