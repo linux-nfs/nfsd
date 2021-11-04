@@ -1384,6 +1384,7 @@ nfsd4_decode_readdir(struct nfsd4_compoundargs *argp, struct nfsd4_readdir *read
 					   ARRAY_SIZE(readdir->rd_bmval)) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_readdir4args(argp, readdir);
 	return nfs_ok;
 }
 
@@ -3886,6 +3887,7 @@ nfsd4_encode_dirent(void *ccdv, const char *name, int namlen,
 	}
 
 	cd->cookie_offset = cookie_offset;
+	trace_enc_entry4(cd->rd_rqstp, ino, name, namlen);
 skip_entry:
 	cd->common.err = nfs_ok;
 	return 0;
@@ -4568,7 +4570,8 @@ nfsd4_encode_readdir(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4
 	*p++ = 0;	/* no more entries */
 	*p++ = htonl(readdir->common.err == nfserr_eof);
 
-	return 0;
+	trace_enc_readdir4resok(resp, readdir);
+	return nfs_ok;
 err_no_verf:
 	xdr_truncate_encode(xdr, starting_len);
 	return nfserr;

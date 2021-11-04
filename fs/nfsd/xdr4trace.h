@@ -1529,6 +1529,37 @@ TRACE_EVENT(dec_read_plus4args,
 	)
 );
 
+TRACE_EVENT(dec_readdir4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_readdir *readdir
+	),
+	TP_ARGS(argp, readdir),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+
+		__field(u64, cookie)
+		__field(u32, dircount)
+		__field(u32, maxcount)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_BITMAP_ASSIGNS(readdir->rd_bmval);
+
+		__entry->cookie = readdir->rd_cookie;
+		__entry->dircount = readdir->rd_dircount;
+		__entry->maxcount = readdir->rd_maxcount;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"cookie=0x%llx dircount=%u maxcount=%u "
+		TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->cookie, __entry->dircount, __entry->maxcount,
+		TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2325,6 +2356,59 @@ TRACE_EVENT(enc_read_plus_hole4resok,
 	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%u offset=%llu%s",
 		TRACE_XDR_CMPD_VARARGS, __entry->count, __entry->offset,
 		__entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_readdir4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_readdir *readdir
+	),
+	TP_ARGS(resp, readdir),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, len)
+		__field(bool, eof)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->eof = readdir->common.err == nfserr_eof;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "len=%u%s",
+		TRACE_XDR_CMPD_VARARGS, __entry->len,
+		__entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_entry4,
+	TP_PROTO(
+		const struct svc_rqst *rqstp,
+		 u64 fileid,
+		 const char *name,
+		 int len),
+	TP_ARGS(rqstp, fileid, name, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, fileid)
+		__string_len(name, name, len)
+	),
+	TP_fast_assign(
+		const struct nfsd4_compoundargs *argp = rqstp->rq_argp;
+		const struct nfsd4_compoundres *resp = rqstp->rq_resp;
+
+		__entry->xid = be32_to_cpu(rqstp->rq_xid);
+		__entry->opcnt = argp->opcnt;
+		__entry->cur_op = resp->opcnt;
+		__entry->minorversion = argp->minorversion;
+
+		__entry->fileid = fileid;
+		__assign_str_len(name, name, len)
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "fileid=%llu name=%s",
+		TRACE_XDR_CMPD_VARARGS, __entry->fileid, __get_str(name)
 	)
 );
 
