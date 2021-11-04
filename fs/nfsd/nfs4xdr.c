@@ -1588,6 +1588,7 @@ nfsd4_decode_release_lockowner(struct nfsd4_compoundargs *argp, struct nfsd4_rel
 	if (argp->minorversion && !zero_clientid(&rlockowner->rl_clientid))
 		return nfserr_inval;
 
+	trace_dec_release_lockowner4args(argp, rlockowner);
 	return nfs_ok;
 }
 
@@ -4588,6 +4589,14 @@ err_no_verf:
 }
 
 static __be32
+nfsd4_encode_release_lockowner(struct nfsd4_compoundres *resp, __be32 nfserr,
+			       void *p)
+{
+	trace_enc_release_lockowner4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_remove(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_remove *remove)
 {
 	struct xdr_stream *xdr = resp->xdr;
@@ -5736,7 +5745,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_SETCLIENTID_CONFIRM] = (nfsd4_enc)nfsd4_encode_noop,
 	[OP_VERIFY]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_WRITE]		= (nfsd4_enc)nfsd4_encode_write,
-	[OP_RELEASE_LOCKOWNER]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_RELEASE_LOCKOWNER]	= (nfsd4_enc)nfsd4_encode_release_lockowner,
 
 	/* NFSv4.1 operations */
 	[OP_BACKCHANNEL_CTL]	= (nfsd4_enc)nfsd4_encode_backchannel_ctl,

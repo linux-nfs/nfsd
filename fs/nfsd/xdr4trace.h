@@ -200,6 +200,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putpubfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putrootfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_reclaim_complete4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_release_lockowner4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
@@ -1581,6 +1582,31 @@ TRACE_EVENT(dec_reclaim_complete4args,
 	TP_printk(TRACE_XDR_CMPD_FORMAT "one_fs=%s",
 		TRACE_XDR_CMPD_VARARGS,
 		__entry->one_fs ? "true" : "false"
+	)
+);
+
+TRACE_EVENT(dec_release_lockowner4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_release_lockowner *rlockowner
+	),
+	TP_ARGS(argp, rlockowner),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+
+		__string_len(owner, owner, rlockowner->rl_owner.len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_CLID_ASSIGNS(rlockowner->rl_clientid);
+
+		__assign_str_len(owner, rlockowner->rl_owner.data,
+				 rlockowner->rl_owner.len);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT "owner=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		__get_str(owner)
 	)
 );
 
