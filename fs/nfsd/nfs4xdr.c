@@ -1398,8 +1398,16 @@ nfsd4_decode_readlink(struct nfsd4_compoundargs *argp, void *p)
 static __be32
 nfsd4_decode_remove(struct nfsd4_compoundargs *argp, struct nfsd4_remove *remove)
 {
+	__be32 status;
+
 	memset(&remove->rm_cinfo, 0, sizeof(remove->rm_cinfo));
-	return nfsd4_decode_component4(argp, &remove->rm_name, &remove->rm_namelen);
+	status = nfsd4_decode_component4(argp, &remove->rm_name,
+					 &remove->rm_namelen);
+	if (status)
+		return status;
+
+	trace_dec_remove4args(argp, remove);
+	return nfs_ok;
 }
 
 static __be32
@@ -4606,7 +4614,9 @@ nfsd4_encode_remove(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_
 	if (!p)
 		return nfserr_resource;
 	p = encode_cinfo(p, &remove->rm_cinfo);
-	return 0;
+
+	trace_enc_remove4resok(resp, remove);
+	return nfs_ok;
 }
 
 static __be32
