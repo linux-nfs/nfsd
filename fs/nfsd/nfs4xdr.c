@@ -1054,6 +1054,7 @@ nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open
 		status = nfsd4_decode_verifier4(argp, &open->op_verf);
 		if (status)
 			return status;
+		trace_dec_createhow4_verifier(argp, open);
 		break;
 	case NFS4_CREATE_EXCLUSIVE4_1:
 		if (argp->minorversion < 1)
@@ -1067,6 +1068,7 @@ nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open
 					     &open->op_label, &open->op_umask);
 		if (status)
 			return status;
+		trace_dec_createhow4_verifier(argp, open);
 		break;
 	default:
 		return nfserr_bad_xdr;
@@ -1174,10 +1176,12 @@ nfsd4_decode_open_claim4(struct nfsd4_compoundargs *argp,
 						 &open->op_fnamelen);
 		if (status)
 			return status;
+		trace_dec_claim4_null(argp, open);
 		break;
 	case NFS4_OPEN_CLAIM_PREVIOUS:
 		if (xdr_stream_decode_u32(argp->xdr, &open->op_delegate_type) < 0)
 			return nfserr_bad_xdr;
+		trace_dec_claim4_previous(argp, open);
 		break;
 	case NFS4_OPEN_CLAIM_DELEGATE_CUR:
 		status = nfsd4_decode_stateid4(argp, &open->op_delegate_stateid);
@@ -1187,6 +1191,7 @@ nfsd4_decode_open_claim4(struct nfsd4_compoundargs *argp,
 						 &open->op_fnamelen);
 		if (status)
 			return status;
+		trace_dec_claim4_delegcur(argp, open);
 		break;
 	case NFS4_OPEN_CLAIM_FH:
 	case NFS4_OPEN_CLAIM_DELEG_PREV_FH:
@@ -1200,6 +1205,7 @@ nfsd4_decode_open_claim4(struct nfsd4_compoundargs *argp,
 		status = nfsd4_decode_stateid4(argp, &open->op_delegate_stateid);
 		if (status)
 			return status;
+		trace_dec_claim4_delegcurfh(argp, open);
 		break;
 	default:
 		return nfserr_bad_xdr;
@@ -1233,7 +1239,12 @@ nfsd4_decode_open(struct nfsd4_compoundargs *argp, struct nfsd4_open *open)
 	status = nfsd4_decode_openflag4(argp, open);
 	if (status)
 		return status;
-	return nfsd4_decode_open_claim4(argp, open);
+	status = nfsd4_decode_open_claim4(argp, open);
+	if (status)
+		return status;
+
+	trace_dec_open4args(argp, open);
+	return nfs_ok;
 }
 
 static __be32
@@ -4151,6 +4162,7 @@ nfsd4_encode_open(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_op
 		*p++ = cpu_to_be32(0);
 		*p++ = cpu_to_be32(0);
 		*p++ = cpu_to_be32(0);   /* XXX: is NULL principal ok? */
+		trace_enc_open4_delegread(resp, open);
 		break;
 	case NFS4_OPEN_DELEGATE_WRITE:
 		nfserr = nfsd4_encode_stateid(xdr, &open->op_delegate_stateid);
@@ -4175,6 +4187,7 @@ nfsd4_encode_open(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_op
 		*p++ = cpu_to_be32(0);
 		*p++ = cpu_to_be32(0);
 		*p++ = cpu_to_be32(0);   /* XXX: is NULL principal ok? */
+		trace_enc_open4_delegwrite(resp, open);
 		break;
 	case NFS4_OPEN_DELEGATE_NONE_EXT: /* 4.1 */
 		switch (open->op_why_no_deleg) {
@@ -4193,12 +4206,15 @@ nfsd4_encode_open(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_op
 				return nfserr_resource;
 			*p++ = cpu_to_be32(open->op_why_no_deleg);
 		}
+		trace_enc_open4_delegnoneext(resp, open);
 		break;
 	default:
 		BUG();
 	}
 	/* XXX save filehandle here */
-	return 0;
+
+	trace_enc_open4resok(resp, open);
+	return nfs_ok;
 }
 
 static __be32

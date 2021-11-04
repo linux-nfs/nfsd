@@ -1257,6 +1257,142 @@ TRACE_EVENT(dec_offload_status4args,
 	)
 );
 
+TRACE_EVENT(dec_createhow4_verifier,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(argp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_VERIFIER_ASSIGN(open->op_verf);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_VERIFIER_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_VERIFIER_VARARG
+	)
+);
+
+TRACE_EVENT(dec_claim4_null,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(argp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(name, open->op_fname, open->op_fnamelen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(name, open->op_fname, open->op_fnamelen);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "name=%s",
+		TRACE_XDR_CMPD_VARARGS, __get_str(name)
+	)
+);
+
+TRACE_EVENT(dec_claim4_previous,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(argp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, delegate_type)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->delegate_type = open->op_delegate_type;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "delegate_type=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_delegation_type(__entry->delegate_type)
+	)
+);
+
+TRACE_EVENT(dec_claim4_delegcur,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(argp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__string_len(name, open->op_fname, open->op_fnamelen)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&open->op_delegate_stateid);
+
+		__assign_str_len(name, open->op_fname, open->op_fnamelen);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT "name=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__get_str(name)
+	)
+);
+
+TRACE_EVENT(dec_claim4_delegcurfh,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(argp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&open->op_delegate_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
+TRACE_EVENT(dec_open4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(argp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, seqid)
+		__field(unsigned long, create)
+		__field(unsigned long, claim)
+		__field(unsigned long, share)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->seqid = open->op_seqid;
+		__entry->create = open->op_create;
+		__entry->claim = open->op_claim_type;
+		__entry->share = open->op_share_access;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"seqid=%u type=%s claim=%s share=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->seqid, show_nfs4_open_create(__entry->create),
+		show_nfs4_open_claimtype(__entry->claim),
+		show_nfs4_open_sharedeny_flags(__entry->share)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1830,6 +1966,109 @@ TRACE_EVENT(enc_offload_status4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%Lu",
 		TRACE_XDR_CMPD_VARARGS, __entry->count
+	)
+);
+
+TRACE_EVENT(enc_open4_delegread,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(resp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(bool, recall)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&open->op_delegate_stateid);
+
+		__entry->recall = !!open->op_recall;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT "%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->recall ? " (recall)" : ""
+	)
+);
+
+TRACE_EVENT(enc_open4_delegwrite,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(resp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(bool, recall)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&open->op_delegate_stateid);
+
+		__entry->recall = !!open->op_recall;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT "%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->recall ? " (recall)" : ""
+	)
+);
+
+TRACE_EVENT(enc_open4_delegnoneext,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(resp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, why_no_deleg)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->why_no_deleg = open->op_why_no_deleg;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "why_no_deleg=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_why_no_delegation(__entry->why_no_deleg)
+
+	)
+);
+
+TRACE_EVENT(enc_open4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_open *open
+	),
+	TP_ARGS(resp, open),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+		TRACE_NFS4_CINFO_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+
+		__field(unsigned long, rflags)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&open->op_stateid);
+		TRACE_NFS4_CINFO_ASSIGNS(open->op_cinfo);
+		TRACE_NFS4_BITMAP_ASSIGNS(open->op_bmval);
+
+		__entry->rflags = open->op_rflags;
+
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		TRACE_NFS4_CINFO_FORMAT TRACE_NFS4_BITMAP_FORMAT
+		"rflags=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		TRACE_NFS4_CINFO_VARARGS, TRACE_NFS4_BITMAP_VARARGS,
+		show_nfs4_open_result(__entry->rflags)
 	)
 );
 
