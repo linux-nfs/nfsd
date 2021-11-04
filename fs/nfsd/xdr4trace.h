@@ -1808,6 +1808,31 @@ TRACE_EVENT(dec_sequence4args,
 	)
 );
 
+TRACE_EVENT(dec_setattr4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_setattr *setattr
+	),
+	TP_ARGS(argp, setattr),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(unsigned long, valid)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&setattr->sa_stateid);
+
+		__entry->valid = setattr->sa_iattr.ia_valid;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"valid=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		show_attr_valid_flags(__entry->valid)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2829,6 +2854,25 @@ TRACE_EVENT(enc_sequence4resok,
 		show_nfs4_sessionid(__entry->sessionid),
 		__entry->seqid, __entry->slotid, __entry->maxslots,
 		show_nfs4_seq4_status(__entry->flags)
+	)
+);
+
+TRACE_EVENT(enc_setattr4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_setattr *setattr
+	),
+	TP_ARGS(resp, setattr),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_BITMAP_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_BITMAP_ASSIGNS(setattr->sa_bmval);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
 	)
 );
 

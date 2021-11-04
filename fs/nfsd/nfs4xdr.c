@@ -1488,10 +1488,15 @@ nfsd4_decode_setattr(struct nfsd4_compoundargs *argp, struct nfsd4_setattr *seta
 	status = nfsd4_decode_stateid4(argp, &setattr->sa_stateid);
 	if (status)
 		return status;
-	return nfsd4_decode_fattr4(argp, setattr->sa_bmval,
-				   ARRAY_SIZE(setattr->sa_bmval),
-				   &setattr->sa_iattr, &setattr->sa_acl,
-				   &setattr->sa_label, NULL);
+	status = nfsd4_decode_fattr4(argp, setattr->sa_bmval,
+				     ARRAY_SIZE(setattr->sa_bmval),
+				     &setattr->sa_iattr, &setattr->sa_acl,
+				     &setattr->sa_label, NULL);
+	if (status)
+		return status;
+
+	trace_dec_setattr4args(argp, setattr);
+	return nfs_ok;
 }
 
 static __be32
@@ -4818,6 +4823,7 @@ nfsd4_encode_setattr(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4
 		*p++ = cpu_to_be32(setattr->sa_bmval[0]);
 		*p++ = cpu_to_be32(setattr->sa_bmval[1]);
 		*p++ = cpu_to_be32(setattr->sa_bmval[2]);
+		trace_enc_setattr4resok(resp, setattr);
 	}
 	return nfserr;
 }
