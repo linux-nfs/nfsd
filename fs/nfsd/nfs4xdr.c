@@ -2076,6 +2076,7 @@ nfsd4_decode_clone(struct nfsd4_compoundargs *argp, struct nfsd4_clone *clone)
 	if (xdr_stream_decode_u64(argp->xdr, &clone->cl_count) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_clone4args(argp, clone);
 	return nfs_ok;
 }
 
@@ -4738,6 +4739,13 @@ nfsd4_encode_allocate(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
 }
 
 static __be32
+nfsd4_encode_clone(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_clone4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd42_encode_nl4_server(struct nfsd4_compoundres *resp, struct nl4_server *ns)
 {
 	struct xdr_stream *xdr = resp->xdr;
@@ -5334,7 +5342,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_READ_PLUS]		= (nfsd4_enc)nfsd4_encode_read_plus,
 	[OP_SEEK]		= (nfsd4_enc)nfsd4_encode_seek,
 	[OP_WRITE_SAME]		= (nfsd4_enc)nfsd4_encode_noop,
-	[OP_CLONE]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_CLONE]		= (nfsd4_enc)nfsd4_encode_clone,
 
 	/* RFC 8276 extended atributes operations */
 	[OP_GETXATTR]		= (nfsd4_enc)nfsd4_encode_getxattr,
