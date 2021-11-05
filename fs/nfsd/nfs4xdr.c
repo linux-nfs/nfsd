@@ -1482,6 +1482,7 @@ static __be32 nfsd4_decode_bind_conn_to_session(struct nfsd4_compoundargs *argp,
 	if (xdr_stream_decode_u32(argp->xdr, &use_conn_in_rdma_mode) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_bind_conn_to_session4args(argp, bcts);
 	return nfs_ok;
 }
 
@@ -3683,6 +3684,8 @@ static __be32 nfsd4_encode_bind_conn_to_session(struct nfsd4_compoundres *resp, 
 	*p++ = cpu_to_be32(bcts->dir);
 	/* Upshifting from TCP to RDMA is not supported */
 	*p++ = cpu_to_be32(0);
+
+	trace_enc_bind_conn_to_session4resok(resp, bcts);
 	return 0;
 }
 

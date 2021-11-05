@@ -280,6 +280,32 @@ TRACE_EVENT(dec_backchannel_ctl4args,
 	)
 );
 
+TRACE_EVENT(dec_bind_conn_to_session4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_bind_conn_to_session *bcts
+	),
+	TP_ARGS(argp, bcts),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, dir_from_client)
+		__array(u8, sessionid, NFS4_MAX_SESSIONID_LEN)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->dir_from_client = bcts->dir;
+		memcpy(__entry->sessionid, &bcts->sessionid,
+		       NFS4_MAX_SESSIONID_LEN);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "sessionid=%s dir_from_client=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_sessionid(__entry->sessionid),
+		show_nfs4_channel_dir_from_client(__entry->dir_from_client)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -307,6 +333,32 @@ TRACE_EVENT(enc_access4resok,
 		TRACE_XDR_CMPD_VARARGS,
 		show_nfs3_access_flags(__entry->access),
 		show_nfs3_access_flags(__entry->supported)
+	)
+);
+
+TRACE_EVENT(enc_bind_conn_to_session4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_bind_conn_to_session *bcts
+	),
+	TP_ARGS(resp, bcts),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, dir_from_server)
+		__array(u8, sessionid, NFS4_MAX_SESSIONID_LEN)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->dir_from_server = bcts->dir;
+		memcpy(__entry->sessionid, &bcts->sessionid,
+		       NFS4_MAX_SESSIONID_LEN);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "sessionid=%s dir_from_server=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_sessionid(__entry->sessionid),
+		show_nfs4_channel_dir_from_server(__entry->dir_from_server)
 	)
 );
 
