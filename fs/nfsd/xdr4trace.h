@@ -424,6 +424,63 @@ TRACE_EVENT(dec_commit4args,
 	)
 );
 
+TRACE_EVENT(dec_copy4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		struct nfsd4_copy *copy
+	),
+	TP_ARGS(argp, copy),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, src_cl_boot)
+		__field(u32, src_cl_id)
+		__field(u32, src_si_id)
+		__field(u32, src_si_generation)
+		__field(u64, src_offset)
+
+		__field(u32, dst_cl_boot)
+		__field(u32, dst_cl_id)
+		__field(u32, dst_si_id)
+		__field(u32, dst_si_generation)
+		__field(u64, dst_offset)
+
+		__field(u64, count)
+	),
+	TP_fast_assign(
+		const stateid_t *stp;
+
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		stp = &copy->cp_src_stateid;
+		__entry->src_cl_boot = stp->si_opaque.so_clid.cl_boot;
+		__entry->src_cl_id = stp->si_opaque.so_clid.cl_id;
+		__entry->src_si_id = stp->si_opaque.so_id;
+		__entry->src_si_generation = stp->si_generation;
+		__entry->src_offset = copy->cp_src_pos;
+
+		stp = &copy->cp_dst_stateid;
+		__entry->dst_cl_boot = stp->si_opaque.so_clid.cl_boot;
+		__entry->dst_cl_id = stp->si_opaque.so_clid.cl_id;
+		__entry->dst_si_id = stp->si_opaque.so_id;
+		__entry->dst_si_generation = stp->si_generation;
+		__entry->dst_offset = copy->cp_dst_pos;
+
+		__entry->count = copy->cp_count;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"src: client=%08x:%08x stateid=%08x:%08x offset=%llu "
+		"dst: client=%08x:%08x stateid=%08x:%08x offset=%llu "
+		"count=%llu",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->src_cl_boot, __entry->src_cl_id,
+		__entry->src_si_id, __entry->src_si_generation,
+		__entry->src_offset,
+		__entry->dst_cl_boot, __entry->dst_cl_id,
+		__entry->dst_si_id, __entry->dst_si_generation,
+		__entry->dst_offset, __entry->count
+	)
+);
 
 /**
  ** Server-side result encoding tracepoints
@@ -515,6 +572,38 @@ TRACE_EVENT(enc_commit4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_VERIFIER_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_VERIFIER_VARARG
+	)
+);
+
+TRACE_EVENT(enc_copy4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_copy *copy
+	),
+	TP_ARGS(resp, copy),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+
+		__field(u64, count)
+		__field(unsigned long, stable)
+	),
+	TP_fast_assign(
+		const struct nfsd42_write_res *write = &copy->cp_res;
+
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&write->cb_stateid);
+		TRACE_NFS4_VERIFIER_ASSIGN(write->wr_verifier);
+
+		__entry->count = write->wr_bytes_written;
+		__entry->stable = write->wr_stable_how;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"count=%llu stable=%s " TRACE_NFS4_VERIFIER_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->count, show_nfs_stable_how(__entry->stable),
+		TRACE_NFS4_VERIFIER_VARARG
 	)
 );
 

@@ -2017,6 +2017,7 @@ nfsd4_decode_copy(struct nfsd4_compoundargs *argp, struct nfsd4_copy *copy)
 	}
 	kfree(ns_dummy);
 
+	trace_dec_copy4args(argp, copy);
 	return nfs_ok;
 }
 
@@ -4816,7 +4817,9 @@ nfsd4_encode_copy(struct nfsd4_compoundres *resp, __be32 nfserr,
 	p = xdr_reserve_space(resp->xdr, 4 + 4);
 	*p++ = xdr_one; /* cr_consecutive */
 	*p = nfsd4_copy_is_sync(copy) ? xdr_one : xdr_zero;
-	return 0;
+
+	trace_enc_copy4resok(resp, copy);
+	return nfs_ok;
 }
 
 static __be32
