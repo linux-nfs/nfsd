@@ -1455,10 +1455,17 @@ nfsd4_decode_release_lockowner(struct nfsd4_compoundargs *argp, struct nfsd4_rel
 
 static __be32 nfsd4_decode_backchannel_ctl(struct nfsd4_compoundargs *argp, struct nfsd4_backchannel_ctl *bc)
 {
+	__be32 status;
+
 	memset(bc, 0, sizeof(*bc));
 	if (xdr_stream_decode_u32(argp->xdr, &bc->bc_cb_program) < 0)
 		return nfserr_bad_xdr;
-	return nfsd4_decode_cb_sec(argp, &bc->bc_cb_sec);
+	status = nfsd4_decode_cb_sec(argp, &bc->bc_cb_sec);
+	if (status)
+		return status;
+
+	trace_dec_backchannel_ctl4args(argp, bc);
+	return nfs_ok;
 }
 
 static __be32 nfsd4_decode_bind_conn_to_session(struct nfsd4_compoundargs *argp, struct nfsd4_bind_conn_to_session *bcts)
@@ -4389,6 +4396,13 @@ nfsd4_encode_write(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_w
 }
 
 static __be32
+nfsd4_encode_backchannel_ctl(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_backchannel_ctl4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_exchange_id(struct nfsd4_compoundres *resp, __be32 nfserr,
 			 struct nfsd4_exchange_id *exid)
 {
@@ -5276,7 +5290,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_RELEASE_LOCKOWNER]	= (nfsd4_enc)nfsd4_encode_noop,
 
 	/* NFSv4.1 operations */
-	[OP_BACKCHANNEL_CTL]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_BACKCHANNEL_CTL]	= (nfsd4_enc)nfsd4_encode_backchannel_ctl,
 	[OP_BIND_CONN_TO_SESSION] = (nfsd4_enc)nfsd4_encode_bind_conn_to_session,
 	[OP_EXCHANGE_ID]	= (nfsd4_enc)nfsd4_encode_exchange_id,
 	[OP_CREATE_SESSION]	= (nfsd4_enc)nfsd4_encode_create_session,

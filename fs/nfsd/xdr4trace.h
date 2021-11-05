@@ -92,6 +92,7 @@ DEFINE_EVENT(svc_xdr_noop4res_class, name, \
 	TP_ARGS(resp))
 
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_allocate4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_backchannel_ctl4resok);
 
 
 /**
@@ -256,6 +257,29 @@ TRACE_EVENT(dec_allocate4args,
 		__entry->offset, __entry->length
 	)
 );
+
+/* XXX: More needed */
+TRACE_EVENT(dec_backchannel_ctl4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_backchannel_ctl *bc
+	),
+	TP_ARGS(argp, bc),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, cb_program)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->cb_program = bc->bc_cb_program;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "cb_program=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->cb_program
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
