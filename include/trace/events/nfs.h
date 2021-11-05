@@ -630,6 +630,14 @@ TRACE_DEFINE_ENUM(LAYOUT_SCSI);
 		{ LAYOUT_FLEX_FILES,		"FLEX_FILES" }, \
 		{ LAYOUT_SCSI,			"SCSI" })
 
+TRACE_DEFINE_ENUM(NOTIFY_DEVICEID4_CHANGE);
+TRACE_DEFINE_ENUM(NOTIFY_DEVICEID4_DELETE);
+
+#define show_pnfs_notify_types(x) \
+	__print_flags(x, "|", \
+		{ NOTIFY_DEVICEID4_CHANGE,	"CHANGE" }, \
+		{ NOTIFY_DEVICEID4_DELETE,	"DELETE" })
+
 #define show_nfs4_seq4_status(x) \
 	__print_flags(x, "|", \
 		{ SEQ4_STATUS_CB_PATH_DOWN,		"CB_PATH_DOWN" }, \
