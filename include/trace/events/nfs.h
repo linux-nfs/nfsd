@@ -400,6 +400,19 @@ TRACE_DEFINE_ENUM(NF4NAMEDATTR);
 		{ NF4ATTRDIR,				"ATTRDIR" }, \
 		{ NF4NAMEDATTR,				"NAMEDATTR" })
 
+#define show_nfs4_channel_dir_from_client(x) \
+	__print_symbolic(x, \
+		{ NFS4_CDFC4_FORE,			"FORE" }, \
+		{ NFS4_CDFC4_BACK,			"BACK" }, \
+		{ NFS4_CDFC4_FORE_OR_BOTH,		"FORE_OR_BOTH" }, \
+		{ NFS4_CDFC4_BACK_OR_BOTH,		"BACK_OR_BOTH" })
+
+#define show_nfs4_channel_dir_from_server(x) \
+	__print_symbolic(x, \
+		{ NFS4_CDFS4_FORE,			"FORE" }, \
+		{ NFS4_CDFS4_BACK,			"BACK" }, \
+		{ NFS4_CDFS4_BOTH,			"BOTH" })
+
 TRACE_DEFINE_ENUM(IOMODE_READ);
 TRACE_DEFINE_ENUM(IOMODE_RW);
 TRACE_DEFINE_ENUM(IOMODE_ANY);
