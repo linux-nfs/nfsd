@@ -1724,6 +1724,33 @@ TRACE_EVENT(dec_secinfo_no_name4args,
 	)
 );
 
+TRACE_EVENT(dec_seek4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_seek *seek
+	),
+	TP_ARGS(argp, seek),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u64, offset)
+		__field(unsigned long, what)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&seek->seek_stateid);
+
+		__entry->offset = seek->seek_offset;
+		__entry->what = seek->seek_whence;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"offset=%llu what=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->offset, show_nfs4_data_content(__entry->what)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2687,6 +2714,30 @@ TRACE_EVENT(enc_secinfo_no_name4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT,
 		TRACE_XDR_CMPD_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_seek4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_seek *seek
+	),
+	TP_ARGS(resp, seek),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, offset)
+		__field(bool, eof)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->offset = seek->seek_pos;
+		__entry->eof = !!seek->seek_eof;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "offset=%llu%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->offset, __entry->eof ? " (eof)" : ""
 	)
 );
 

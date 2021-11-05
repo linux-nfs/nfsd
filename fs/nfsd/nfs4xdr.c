@@ -2317,6 +2317,7 @@ nfsd4_decode_seek(struct nfsd4_compoundargs *argp, struct nfsd4_seek *seek)
 
 	seek->seek_eof = 0;
 	seek->seek_pos = 0;
+	trace_dec_seek4args(argp, seek);
 	return nfs_ok;
 }
 
@@ -5531,7 +5532,8 @@ nfsd4_encode_seek(struct nfsd4_compoundres *resp, __be32 nfserr,
 	*p++ = cpu_to_be32(seek->seek_eof);
 	p = xdr_encode_hyper(p, seek->seek_pos);
 
-	return 0;
+	trace_enc_seek4resok(resp, seek);
+	return nfs_ok;
 }
 
 static __be32
