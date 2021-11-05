@@ -1238,6 +1238,25 @@ TRACE_EVENT(dec_offload_cancel4args,
 	)
 );
 
+TRACE_EVENT(dec_offload_status4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_offload_status *os
+	),
+	TP_ARGS(argp, os),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&os->stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1790,6 +1809,27 @@ TRACE_EVENT(enc_locku4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_offload_status4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_offload_status *os
+	),
+	TP_ARGS(resp, os),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, count)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->count = os->count;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%Lu",
+		TRACE_XDR_CMPD_VARARGS, __entry->count
 	)
 );
 

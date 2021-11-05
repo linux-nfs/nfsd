@@ -2190,9 +2190,16 @@ static __be32
 nfsd4_decode_offload_status(struct nfsd4_compoundargs *argp,
 			    struct nfsd4_offload_status *os)
 {
+	__be32 status;
+
 	os->count = 0;
 	os->status = 0;
-	return nfsd4_decode_stateid4(argp, &os->stateid);
+	status = nfsd4_decode_stateid4(argp, &os->stateid);
+	if (status)
+		return status;
+
+	trace_dec_offload_status4args(argp, os);
+	return nfs_ok;
 }
 
 static __be32
@@ -5131,6 +5138,8 @@ nfsd4_encode_offload_status(struct nfsd4_compoundres *resp, __be32 nfserr,
 		return nfserr_resource;
 	p = xdr_encode_hyper(p, os->count);
 	*p++ = cpu_to_be32(0);
+
+	trace_enc_offload_status4resok(resp, os);
 	return nfserr;
 }
 
