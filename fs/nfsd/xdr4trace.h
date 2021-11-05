@@ -199,6 +199,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_offload_cancel4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putpubfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putrootfh4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_reclaim_complete4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
@@ -1558,6 +1559,28 @@ TRACE_EVENT(dec_readdir4args,
 		TRACE_XDR_CMPD_VARARGS,
 		__entry->cookie, __entry->dircount, __entry->maxcount,
 		TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(dec_reclaim_complete4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_reclaim_complete *rc
+	),
+	TP_ARGS(argp, rc),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(bool, one_fs)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->one_fs = !!rc->rca_one_fs;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "one_fs=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->one_fs ? "true" : "false"
 	)
 );
 

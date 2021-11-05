@@ -2054,6 +2054,8 @@ static __be32 nfsd4_decode_reclaim_complete(struct nfsd4_compoundargs *argp,
 {
 	if (xdr_stream_decode_bool(argp->xdr, &rc->rca_one_fs) < 0)
 		return nfserr_bad_xdr;
+
+	trace_dec_reclaim_complete4args(argp, rc);
 	return nfs_ok;
 }
 
@@ -4909,6 +4911,14 @@ nfsd4_encode_create_session(struct nfsd4_compoundres *resp, __be32 nfserr,
 }
 
 static __be32
+nfsd4_encode_reclaim_complete(struct nfsd4_compoundres *resp, __be32 nfserr,
+			      void *p)
+{
+	trace_enc_reclaim_complete4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_sequence(struct nfsd4_compoundres *resp, __be32 nfserr,
 		      struct nfsd4_sequence *seq)
 {
@@ -5755,7 +5765,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_TEST_STATEID]	= (nfsd4_enc)nfsd4_encode_test_stateid,
 	[OP_WANT_DELEGATION]	= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_DESTROY_CLIENTID]	= (nfsd4_enc)nfsd4_encode_destroy_clientid,
-	[OP_RECLAIM_COMPLETE]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_RECLAIM_COMPLETE]	= (nfsd4_enc)nfsd4_encode_reclaim_complete,
 
 	/* NFSv4.2 operations */
 	[OP_ALLOCATE]		= (nfsd4_enc)nfsd4_encode_allocate,
