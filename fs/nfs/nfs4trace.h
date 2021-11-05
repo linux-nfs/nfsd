@@ -2098,14 +2098,6 @@ TRACE_EVENT(ff_layout_commit_error,
 );
 
 #ifdef CONFIG_NFS_V4_2
-TRACE_DEFINE_ENUM(NFS4_CONTENT_DATA);
-TRACE_DEFINE_ENUM(NFS4_CONTENT_HOLE);
-
-#define show_llseek_mode(what)			\
-	__print_symbolic(what,			\
-		{ NFS4_CONTENT_DATA, "DATA" },		\
-		{ NFS4_CONTENT_HOLE, "HOLE" })
-
 TRACE_EVENT(nfs4_llseek,
 		TP_PROTO(
 			const struct inode *inode,
@@ -2164,7 +2156,7 @@ TRACE_EVENT(nfs4_llseek,
 			__entry->fhandle,
 			__entry->stateid_seq, __entry->stateid_hash,
 			__entry->offset_s,
-			show_llseek_mode(__entry->what),
+			show_nfs4_data_content(__entry->what),
 			__entry->offset_r,
 			__entry->eof
 		)
