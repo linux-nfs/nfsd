@@ -1924,8 +1924,14 @@ static __be32
 nfsd4_decode_deallocate(struct nfsd4_compoundargs *argp,
 			struct nfsd4_fallocate *deallocate)
 {
+	__be32 status;
 
-	return nfsd4_decode_fallocate(argp, deallocate);
+	status = nfsd4_decode_fallocate(argp, deallocate);
+	if (status)
+		return status;
+
+	trace_dec_deallocate4args(argp, deallocate);
+	return nfs_ok;
 }
 
 static __be32 nfsd4_decode_nl4_server(struct nfsd4_compoundargs *argp,
@@ -4841,6 +4847,13 @@ nfsd4_encode_copy(struct nfsd4_compoundres *resp, __be32 nfserr,
 }
 
 static __be32
+nfsd4_encode_deallocate(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_deallocate4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_offload_status(struct nfsd4_compoundres *resp, __be32 nfserr,
 			    struct nfsd4_offload_status *os)
 {
@@ -5373,7 +5386,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_ALLOCATE]		= (nfsd4_enc)nfsd4_encode_allocate,
 	[OP_COPY]		= (nfsd4_enc)nfsd4_encode_copy,
 	[OP_COPY_NOTIFY]	= (nfsd4_enc)nfsd4_encode_copy_notify,
-	[OP_DEALLOCATE]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_DEALLOCATE]		= (nfsd4_enc)nfsd4_encode_deallocate,
 	[OP_IO_ADVISE]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_LAYOUTERROR]	= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_LAYOUTSTATS]	= (nfsd4_enc)nfsd4_encode_noop,

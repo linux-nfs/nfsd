@@ -160,6 +160,7 @@ DEFINE_EVENT(svc_xdr_noop4res_class, name, \
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_allocate4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_backchannel_ctl4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_clone4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_deallocate4resok);
 
 
 /**
@@ -631,6 +632,33 @@ TRACE_EVENT(dec_create_session4args,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
 		__entry->seqid, __entry->cb_program,
 		show_nfs4_csa_flags(__entry->flags)
+	)
+);
+
+TRACE_EVENT(dec_deallocate4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_fallocate *deallocate
+	),
+	TP_ARGS(argp, deallocate),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&deallocate->falloc_stateid);
+
+		__entry->offset = deallocate->falloc_offset;
+		__entry->length = deallocate->falloc_length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->offset, __entry->length
 	)
 );
 
