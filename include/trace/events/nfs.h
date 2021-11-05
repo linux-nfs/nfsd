@@ -648,6 +648,11 @@ TRACE_DEFINE_ENUM(RETURN_ALL);
 		{ RETURN_FSID,			"FSID" }, \
 		{ RETURN_ALL,			"ALL" })
 
+#define show_nfs4_secinfo_style(x) \
+	__print_symbolic(x, \
+		{ NFS4_SECINFO_STYLE4_CURRENT_FH,	"CURRENT_FH" }, \
+		{ NFS4_SECINFO_STYLE4_PARENT,		"PARENT" })
+
 #define show_nfs4_seq4_status(x) \
 	__print_flags(x, "|", \
 		{ SEQ4_STATUS_CB_PATH_DOWN,		"CB_PATH_DOWN" }, \
