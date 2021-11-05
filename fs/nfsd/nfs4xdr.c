@@ -1645,7 +1645,12 @@ nfsd4_decode_exchange_id(struct nfsd4_compoundargs *argp,
 	status = nfsd4_decode_state_protect4_a(argp, exid);
 	if (status)
 		return status;
-	return nfsd4_decode_nfs_impl_id4(argp, exid);
+	status = nfsd4_decode_nfs_impl_id4(argp, exid);
+	if (status)
+		return status;
+
+	trace_dec_exchange_id4args(argp, exid);
+	return nfs_ok;
 }
 
 static __be32
@@ -4549,7 +4554,9 @@ nfsd4_encode_exchange_id(struct nfsd4_compoundres *resp, __be32 nfserr,
 
 	/* Implementation id */
 	*p++ = cpu_to_be32(0);	/* zero length nfs_impl_id4 array */
-	return 0;
+
+	trace_enc_exchange_id4resok(resp, exid);
+	return nfs_ok;
 }
 
 static __be32

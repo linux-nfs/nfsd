@@ -725,6 +725,38 @@ TRACE_EVENT(dec_destroy_session4args,
 	)
 );
 
+/* XXX: More needed */
+TRACE_EVENT(dec_exchange_id4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_exchange_id *exid
+	),
+	TP_ARGS(argp, exid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_VERIFIER_FIELD
+
+		__field(unsigned long, flags)
+		__field(unsigned long, spa_how)
+		__string_len(owner, owner, exid->clname.len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_VERIFIER_ASSIGN(exid->verifier);
+
+		__entry->flags = exid->flags;
+		__entry->spa_how = exid->spa_how;
+		__assign_str_len(owner, exid->clname.data, exid->clname.len);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_VERIFIER_FORMAT
+		"owner=%s flags=%s spa_how=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_VERIFIER_VARARG,
+		__get_str(owner),
+		show_nfs4_exchgid4_flags(__entry->flags),
+		show_nfs4_exchid4_spa_how(__entry->spa_how)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -950,6 +982,33 @@ TRACE_EVENT(enc_create_session4resok,
 		TRACE_XDR_CMPD_VARARGS,
 		show_nfs4_sessionid(__entry->sessionid),
 		__entry->seqid, show_nfs4_csa_flags(__entry->flags)
+	)
+);
+
+TRACE_EVENT(enc_exchange_id4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_exchange_id *exid
+	),
+	TP_ARGS(resp, exid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+
+		__field(u32, seqid)
+		__field(unsigned long, flags)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_CLID_ASSIGNS(exid->clientid);
+
+		__entry->seqid = exid->seqid;
+		__entry->flags = exid->flags;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT
+		"seqid=%u flags=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		__entry->seqid, show_nfs4_exchgid4_flags(__entry->flags)
 	)
 );
 
