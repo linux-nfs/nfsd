@@ -638,6 +638,16 @@ TRACE_DEFINE_ENUM(NOTIFY_DEVICEID4_DELETE);
 		{ NOTIFY_DEVICEID4_CHANGE,	"CHANGE" }, \
 		{ NOTIFY_DEVICEID4_DELETE,	"DELETE" })
 
+TRACE_DEFINE_ENUM(RETURN_FILE);
+TRACE_DEFINE_ENUM(RETURN_FSID);
+TRACE_DEFINE_ENUM(RETURN_ALL);
+
+#define show_pnfs_return_type(x) \
+	__print_symbolic(x, \
+		{ RETURN_FILE,			"FILE" }, \
+		{ RETURN_FSID,			"FSID" }, \
+		{ RETURN_ALL,			"ALL" })
+
 #define show_nfs4_seq4_status(x) \
 	__print_flags(x, "|", \
 		{ SEQ4_STATUS_CB_PATH_DOWN,		"CB_PATH_DOWN" }, \
