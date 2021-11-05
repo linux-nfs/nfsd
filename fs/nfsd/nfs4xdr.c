@@ -2029,6 +2029,7 @@ static __be32 nfsd4_decode_secinfo_no_name(struct nfsd4_compoundargs *argp,
 		return nfserr_bad_xdr;
 
 	sin->sin_exp = NULL;
+	trace_dec_secinfo_no_name4args(argp, sin);
 	return nfs_ok;
 }
 
@@ -4772,8 +4773,14 @@ nfsd4_encode_secinfo_no_name(struct nfsd4_compoundres *resp, __be32 nfserr,
 		     struct nfsd4_secinfo_no_name *secinfo)
 {
 	struct xdr_stream *xdr = resp->xdr;
+	__be32 status;
 
-	return nfsd4_do_encode_secinfo(xdr, secinfo->sin_exp);
+	status = nfsd4_do_encode_secinfo(xdr, secinfo->sin_exp);
+	if (status)
+		return status;
+
+	trace_enc_secinfo_no_name4resok(resp, secinfo);
+	return nfs_ok;
 }
 
 /*
