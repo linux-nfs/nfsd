@@ -873,6 +873,40 @@ TRACE_EVENT(dec_getattr4args,
 	)
 );
 
+TRACE_EVENT(dec_getdeviceinfo4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_getdeviceinfo *gdp
+	),
+	TP_ARGS(argp, gdp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, layout_type)
+		__field(unsigned long, notify_types)
+		__field(u64, dev_idx)
+		__field(u32, dev_gen)
+		__field(u32, maxcount)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->layout_type = gdp->gd_layout_type;
+		__entry->notify_types = gdp->gd_notify_types;
+		__entry->dev_idx = gdp->gd_devid.fsid_idx;
+		__entry->dev_gen = gdp->gd_devid.generation;
+		__entry->maxcount = gdp->gd_maxcount;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"layout_type=%s dev_id=[0x%llx:0x%x] "
+		"maxcount=%u notify_types=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_pnfs_layout_type(__entry->layout_type),
+		__entry->dev_idx, __entry->dev_gen, __entry->maxcount,
+		show_pnfs_notify_types(__entry->notify_types)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1144,6 +1178,33 @@ TRACE_EVENT(enc_getattr4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_getdeviceinfo4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_getdeviceinfo *gdp
+	),
+	TP_ARGS(resp, gdp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, layout_type)
+		__field(unsigned long, notification)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->layout_type = gdp->gd_layout_type;
+		__entry->notification = gdp->gd_notify_types;
+		/* The device_addr4 is layout_type-specific,
+		 * and thus is reported separately. */
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "layout_type=%s notification=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_pnfs_layout_type(__entry->layout_type),
+		show_pnfs_notify_types(__entry->notification)
 	)
 );
 

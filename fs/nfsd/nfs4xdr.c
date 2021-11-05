@@ -1769,6 +1769,7 @@ nfsd4_decode_getdeviceinfo(struct nfsd4_compoundargs *argp,
 					   &gdev->gd_notify_types, 1) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_getdeviceinfo4args(argp, gdev);
 	return nfs_ok;
 }
 
@@ -4767,7 +4768,9 @@ nfsd4_encode_getdeviceinfo(struct nfsd4_compoundres *resp, __be32 nfserr,
 		*p++ = 0;
 	}
 
-	return 0;
+	trace_enc_getdeviceinfo4resok(resp, gdev);
+	return nfs_ok;
+
 toosmall:
 	dprintk("%s: maxcount too small\n", __func__);
 	needed_len = xdr->buf->len + 4 /* notifications */;
