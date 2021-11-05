@@ -2038,7 +2038,12 @@ nfsd4_decode_copy_notify(struct nfsd4_compoundargs *argp,
 	status = nfsd4_decode_stateid4(argp, &cn->cpn_src_stateid);
 	if (status)
 		return status;
-	return nfsd4_decode_nl4_server(argp, cn->cpn_dst);
+	status = nfsd4_decode_nl4_server(argp, cn->cpn_dst);
+	if (status)
+		return status;
+
+	trace_dec_copy_notify4args(argp, cn);
+	return nfs_ok;
 }
 
 static __be32
@@ -5017,6 +5022,8 @@ nfsd4_encode_copy_notify(struct nfsd4_compoundres *resp, __be32 nfserr,
 	*p++ = cpu_to_be32(1);
 
 	nfserr = nfsd42_encode_nl4_server(resp, cn->cpn_src);
+
+	trace_enc_copy_notify4resok(resp, cn);
 	return nfserr;
 }
 
