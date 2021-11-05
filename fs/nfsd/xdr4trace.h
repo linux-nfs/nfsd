@@ -192,6 +192,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_free_stateid4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_lookup4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_lookupp4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_nverify4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_offload_cancel4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
@@ -1215,6 +1216,25 @@ TRACE_EVENT(dec_nverify4args,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_BITMAP_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(dec_offload_cancel4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_offload_status *os
+	),
+	TP_ARGS(argp, os),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&os->stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
 	)
 );
 

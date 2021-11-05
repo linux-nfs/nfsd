@@ -2173,6 +2173,20 @@ nfsd4_decode_copy_notify(struct nfsd4_compoundargs *argp,
 }
 
 static __be32
+nfsd4_decode_offload_cancel(struct nfsd4_compoundargs *argp,
+			    struct nfsd4_offload_status *os)
+{
+	__be32 status;
+
+	status = nfsd4_decode_stateid4(argp, &os->stateid);
+	if (status)
+		return status;
+
+	trace_dec_offload_cancel4args(argp, os);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_offload_status(struct nfsd4_compoundargs *argp,
 			    struct nfsd4_offload_status *os)
 {
@@ -2514,7 +2528,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_IO_ADVISE]		= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_LAYOUTERROR]	= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_LAYOUTSTATS]	= (nfsd4_dec)nfsd4_decode_notsupp,
-	[OP_OFFLOAD_CANCEL]	= (nfsd4_dec)nfsd4_decode_offload_status,
+	[OP_OFFLOAD_CANCEL]	= (nfsd4_dec)nfsd4_decode_offload_cancel,
 	[OP_OFFLOAD_STATUS]	= (nfsd4_dec)nfsd4_decode_offload_status,
 	[OP_READ_PLUS]		= (nfsd4_dec)nfsd4_decode_read,
 	[OP_SEEK]		= (nfsd4_dec)nfsd4_decode_seek,
@@ -5098,6 +5112,14 @@ nfsd4_encode_free_stateid(struct nfsd4_compoundres *resp, __be32 nfserr, void *p
 }
 
 static __be32
+nfsd4_encode_offload_cancel(struct nfsd4_compoundres *resp, __be32 nfserr,
+			    void *p)
+{
+	trace_enc_offload_cancel4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_offload_status(struct nfsd4_compoundres *resp, __be32 nfserr,
 			    struct nfsd4_offload_status *os)
 {
@@ -5634,7 +5656,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_IO_ADVISE]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_LAYOUTERROR]	= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_LAYOUTSTATS]	= (nfsd4_enc)nfsd4_encode_noop,
-	[OP_OFFLOAD_CANCEL]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_OFFLOAD_CANCEL]	= (nfsd4_enc)nfsd4_encode_offload_cancel,
 	[OP_OFFLOAD_STATUS]	= (nfsd4_enc)nfsd4_encode_offload_status,
 	[OP_READ_PLUS]		= (nfsd4_enc)nfsd4_encode_read_plus,
 	[OP_SEEK]		= (nfsd4_enc)nfsd4_encode_seek,
