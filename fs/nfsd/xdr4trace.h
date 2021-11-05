@@ -70,6 +70,29 @@
  ** Event classes
  **/
 
+DECLARE_EVENT_CLASS(svc_xdr_noop4res_class,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp
+	),
+	TP_ARGS(resp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT, TRACE_XDR_CMPD_VARARGS
+	)
+);
+#define DEFINE_SVC_XDR_NOOP4RES_EVENT(name) \
+DEFINE_EVENT(svc_xdr_noop4res_class, name, \
+	TP_PROTO( \
+		const struct nfsd4_compoundres *resp \
+	), \
+	TP_ARGS(resp))
+
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_allocate4resok);
+
 
 /**
  ** Error reports
@@ -207,6 +230,32 @@ TRACE_EVENT(dec_access4args,
 	)
 );
 
+TRACE_EVENT(dec_allocate4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_fallocate *fallocate
+	),
+	TP_ARGS(argp, fallocate),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&fallocate->falloc_stateid);
+
+		__entry->offset = fallocate->falloc_offset;
+		__entry->length = fallocate->falloc_length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->offset, __entry->length
+	)
+);
 
 /**
  ** Server-side result encoding tracepoints

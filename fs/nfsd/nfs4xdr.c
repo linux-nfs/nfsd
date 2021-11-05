@@ -1887,7 +1887,14 @@ static __be32
 nfsd4_decode_allocate(struct nfsd4_compoundargs *argp,
 		      struct nfsd4_fallocate *allocate)
 {
-	return nfsd4_decode_fallocate(argp, allocate);
+	__be32 status;
+
+	status = nfsd4_decode_fallocate(argp, allocate);
+	if (status)
+		return status;
+
+	trace_dec_allocate4args(argp, allocate);
+	return nfs_ok;
 }
 
 static __be32
@@ -4707,6 +4714,13 @@ nfsd42_encode_write_res(struct nfsd4_compoundres *resp,
 }
 
 static __be32
+nfsd4_encode_allocate(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_allocate4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd42_encode_nl4_server(struct nfsd4_compoundres *resp, struct nl4_server *ns)
 {
 	struct xdr_stream *xdr = resp->xdr;
@@ -5291,7 +5305,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_RECLAIM_COMPLETE]	= (nfsd4_enc)nfsd4_encode_noop,
 
 	/* NFSv4.2 operations */
-	[OP_ALLOCATE]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_ALLOCATE]		= (nfsd4_enc)nfsd4_encode_allocate,
 	[OP_COPY]		= (nfsd4_enc)nfsd4_encode_copy,
 	[OP_COPY_NOTIFY]	= (nfsd4_enc)nfsd4_encode_copy_notify,
 	[OP_DEALLOCATE]		= (nfsd4_enc)nfsd4_encode_noop,
