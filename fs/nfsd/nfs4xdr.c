@@ -1813,7 +1813,12 @@ nfsd4_decode_layoutcommit(struct nfsd4_compoundargs *argp,
 	} else {
 		lcp->lc_mtime.tv_nsec = UTIME_NOW;
 	}
-	return nfsd4_decode_layoutupdate4(argp, lcp);
+	status = nfsd4_decode_layoutupdate4(argp, lcp);
+	if (status)
+		return status;
+
+	trace_dec_layoutcommit4args(argp, lcp);
+	return nfs_ok;
 }
 
 static __be32
@@ -4834,6 +4839,8 @@ nfsd4_encode_layoutcommit(struct nfsd4_compoundres *resp, __be32 nfserr,
 		if (!p)
 			return nfserr_resource;
 		p = xdr_encode_hyper(p, lcp->lc_newsize);
+
+		trace_enc_layoutcommit4resok(resp, lcp);
 	}
 
 	return 0;

@@ -930,6 +930,29 @@ TRACE_EVENT(dec_getdeviceinfo4args,
 	)
 );
 
+TRACE_EVENT(dec_layoutcommit4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_layoutcommit *lcp
+	),
+	TP_ARGS(argp, lcp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, offset)
+		__field(u64, length)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->offset = lcp->lc_seg.offset;
+		__entry->length = lcp->lc_seg.length;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS, __entry->offset, __entry->length
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -1249,6 +1272,27 @@ TRACE_EVENT(enc_getfh4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT "fh_hash=0x%08x",
 		TRACE_XDR_CMPD_VARARGS, __entry->fh_hash
+	)
+);
+
+TRACE_EVENT(enc_layoutcommit4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_layoutcommit *lcp
+	),
+	TP_ARGS(resp, lcp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, newsize)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->newsize = lcp->lc_newsize;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "newsize=%llu",
+		TRACE_XDR_CMPD_VARARGS, __entry->newsize
 	)
 );
 
