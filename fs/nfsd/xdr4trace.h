@@ -164,6 +164,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_deallocate4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_delegreturn4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_clientid4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_session4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_free_stateid4resok);
 
 
 /**
@@ -757,6 +758,24 @@ TRACE_EVENT(dec_exchange_id4args,
 	)
 );
 
+TRACE_EVENT(dec_free_stateid4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_free_stateid *free_stateid
+	),
+	TP_ARGS(argp, free_stateid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&free_stateid->fr_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
 
 /**
  ** Server-side result encoding tracepoints

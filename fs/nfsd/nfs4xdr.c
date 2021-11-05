@@ -1733,7 +1733,14 @@ static __be32
 nfsd4_decode_free_stateid(struct nfsd4_compoundargs *argp,
 			  struct nfsd4_free_stateid *free_stateid)
 {
-	return nfsd4_decode_stateid4(argp, &free_stateid->fr_stateid);
+	__be32 status;
+
+	status = nfsd4_decode_stateid4(argp, &free_stateid->fr_stateid);
+	if (status)
+		return status;
+
+	trace_dec_free_stateid4args(argp, free_stateid);
+	return nfs_ok;
 }
 
 #ifdef CONFIG_NFSD_PNFS
@@ -4903,6 +4910,13 @@ nfsd4_encode_destroy_session(struct nfsd4_compoundres *resp, __be32 nfserr, void
 }
 
 static __be32
+nfsd4_encode_free_stateid(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_destroy_session4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_offload_status(struct nfsd4_compoundres *resp, __be32 nfserr,
 			    struct nfsd4_offload_status *os)
 {
@@ -5408,7 +5422,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_EXCHANGE_ID]	= (nfsd4_enc)nfsd4_encode_exchange_id,
 	[OP_CREATE_SESSION]	= (nfsd4_enc)nfsd4_encode_create_session,
 	[OP_DESTROY_SESSION]	= (nfsd4_enc)nfsd4_encode_destroy_session,
-	[OP_FREE_STATEID]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_FREE_STATEID]	= (nfsd4_enc)nfsd4_encode_free_stateid,
 	[OP_GET_DIR_DELEGATION]	= (nfsd4_enc)nfsd4_encode_noop,
 #ifdef CONFIG_NFSD_PNFS
 	[OP_GETDEVICEINFO]	= (nfsd4_enc)nfsd4_encode_getdeviceinfo,
