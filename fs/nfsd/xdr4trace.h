@@ -1880,6 +1880,25 @@ TRACE_EVENT(dec_setclientid_confirm4args,
 	)
 );
 
+TRACE_EVENT(dec_test_stateid4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_test_stateid_id *stateid
+	),
+	TP_ARGS(argp, stateid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&stateid->ts_id_stateid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2943,6 +2962,27 @@ TRACE_EVENT(enc_setclientid4resok,
 		TRACE_NFS4_CLID_FORMAT TRACE_NFS4_VERIFIER_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
 		TRACE_NFS4_VERIFIER_VARARG
+	)
+);
+
+TRACE_EVENT(enc_test_stateid4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_test_stateid_id *stateid
+	),
+	TP_ARGS(resp, stateid),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, status)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->status = be32_to_cpu(stateid->ts_id_status);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "status=%s",
+		TRACE_XDR_CMPD_VARARGS, show_nfs4_status(__entry->status)
 	)
 );
 

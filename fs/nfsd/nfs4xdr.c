@@ -2096,6 +2096,7 @@ nfsd4_decode_test_stateid(struct nfsd4_compoundargs *argp, struct nfsd4_test_sta
 		status = nfsd4_decode_stateid4(argp, &stateid->ts_id_stateid);
 		if (status)
 			return status;
+		trace_dec_test_stateid4args(argp, stateid);
 	}
 
 	return nfs_ok;
@@ -5073,6 +5074,7 @@ nfsd4_encode_test_stateid(struct nfsd4_compoundres *resp, __be32 nfserr,
 
 	list_for_each_entry_safe(stateid, next, &test_stateid->ts_stateid_list, ts_id_list) {
 		*p++ = stateid->ts_id_status;
+		trace_enc_test_stateid4resok(resp, stateid);
 	}
 
 	return 0;
