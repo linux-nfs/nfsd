@@ -83,6 +83,22 @@
 		(__entry->after - __entry->before), \
 		(__entry->atomic ? " (atomic)" : "")
 
+#define TRACE_NFS4_CLID_FIELDS \
+		__field(u32, cl_boot) \
+		__field(u32, cl_id)
+
+#define TRACE_NFS4_CLID_ASSIGNS(clid) \
+		do { \
+			__entry->cl_boot = (clid).cl_boot; \
+			__entry->cl_id = (clid).cl_id; \
+		} while (0)
+
+#define TRACE_NFS4_CLID_FORMAT \
+		"client=%08x:%08x "
+
+#define TRACE_NFS4_CLID_VARARGS \
+		__entry->cl_boot, __entry->cl_id
+
 #define TRACE_NFS4_STATEID_FIELDS \
 		__field(u32, cl_boot) \
 		__field(u32, cl_id) \
@@ -564,6 +580,60 @@ TRACE_EVENT(dec_create4args,
 	)
 );
 
+TRACE_EVENT(dec_create_session4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_create_session *cr_ses
+	),
+	TP_ARGS(argp, cr_ses),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+
+		__field(unsigned long, flags)
+		__field(u32, seqid)
+		__field(u32, cb_program)
+
+		__field(u32, fore_maxreqsz)
+		__field(u32, fore_maxrespsz)
+		__field(u32, fore_maxresp_cached)
+		__field(u32, fore_maxops)
+		__field(u32, fore_maxreps)
+
+		__field(u32, back_maxreqsz)
+		__field(u32, back_maxrespsz)
+		__field(u32, back_maxresp_cached)
+		__field(u32, back_maxops)
+		__field(u32, back_maxreps)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_CLID_ASSIGNS(cr_ses->clientid);
+
+		__entry->flags = cr_ses->flags;
+		__entry->seqid = cr_ses->seqid;
+		__entry->cb_program = cr_ses->callback_prog;
+
+		__entry->fore_maxreqsz = cr_ses->fore_channel.maxreq_sz;
+		__entry->fore_maxrespsz = cr_ses->fore_channel.maxresp_sz;
+		__entry->fore_maxresp_cached = cr_ses->fore_channel.maxresp_cached;
+		__entry->fore_maxops = cr_ses->fore_channel.maxops;
+		__entry->fore_maxreps = cr_ses->fore_channel.maxreqs;
+
+		__entry->back_maxreqsz = cr_ses->back_channel.maxreq_sz;
+		__entry->back_maxrespsz = cr_ses->back_channel.maxresp_sz;
+		__entry->back_maxresp_cached = cr_ses->back_channel.maxresp_cached;
+		__entry->back_maxops = cr_ses->back_channel.maxops;
+		__entry->back_maxreps = cr_ses->back_channel.maxreqs;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT
+		"seqid=%u cb_program=%u flags=%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS,
+		__entry->seqid, __entry->cb_program,
+		show_nfs4_csa_flags(__entry->flags)
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -737,6 +807,58 @@ TRACE_EVENT(enc_create4resok,
 		TRACE_NFS4_BITMAP_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CINFO_VARARGS,
 		TRACE_NFS4_BITMAP_VARARGS
+	)
+);
+
+TRACE_EVENT(enc_create_session4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_create_session *cr_ses
+	),
+	TP_ARGS(resp, cr_ses),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__array(u8, sessionid, NFS4_MAX_SESSIONID_LEN)
+		__field(u32, seqid)
+		__field(unsigned long, flags)
+
+		__field(u32, fore_maxreqsz)
+		__field(u32, fore_maxrespsz)
+		__field(u32, fore_maxresp_cached)
+		__field(u32, fore_maxops)
+		__field(u32, fore_maxreps)
+
+		__field(u32, back_maxreqsz)
+		__field(u32, back_maxrespsz)
+		__field(u32, back_maxresp_cached)
+		__field(u32, back_maxops)
+		__field(u32, back_maxreps)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		memcpy(__entry->sessionid, &cr_ses->sessionid,
+		       NFS4_MAX_SESSIONID_LEN);
+		__entry->seqid = cr_ses->seqid;
+		__entry->flags = cr_ses->flags;
+
+		__entry->fore_maxreqsz = cr_ses->fore_channel.maxreq_sz;
+		__entry->fore_maxrespsz = cr_ses->fore_channel.maxresp_sz;
+		__entry->fore_maxresp_cached = cr_ses->fore_channel.maxresp_cached;
+		__entry->fore_maxops = cr_ses->fore_channel.maxops;
+		__entry->fore_maxreps = cr_ses->fore_channel.maxreqs;
+
+		__entry->back_maxreqsz = cr_ses->back_channel.maxreq_sz;
+		__entry->back_maxrespsz = cr_ses->back_channel.maxresp_sz;
+		__entry->back_maxresp_cached = cr_ses->back_channel.maxresp_cached;
+		__entry->back_maxops = cr_ses->back_channel.maxops;
+		__entry->back_maxreps = cr_ses->back_channel.maxreqs;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "sessionid=%s seqid=%u flags=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_nfs4_sessionid(__entry->sessionid),
+		__entry->seqid, show_nfs4_csa_flags(__entry->flags)
 	)
 );
 

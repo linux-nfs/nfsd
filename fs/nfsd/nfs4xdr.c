@@ -1695,7 +1695,12 @@ nfsd4_decode_create_session(struct nfsd4_compoundargs *argp,
 		return status;
 	if (xdr_stream_decode_u32(argp->xdr, &sess->callback_prog) < 0)
 		return nfserr_bad_xdr;
-	return nfsd4_decode_cb_sec(argp, &sess->cb_sec);
+	status = nfsd4_decode_cb_sec(argp, &sess->cb_sec);
+	if (status)
+		return status;
+
+	trace_dec_create_session4args(argp, sess);
+	return nfs_ok;
 }
 
 static __be32
@@ -4563,7 +4568,9 @@ nfsd4_encode_create_session(struct nfsd4_compoundres *resp, __be32 nfserr,
 			return nfserr_resource;
 		*p++ = cpu_to_be32(sess->back_channel.rdma_attrs);
 	}
-	return 0;
+
+	trace_enc_create_session4resok(resp, sess);
+	return nfs_ok;
 }
 
 static __be32
