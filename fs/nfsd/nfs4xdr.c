@@ -1714,7 +1714,14 @@ static __be32
 nfsd4_decode_destroy_session(struct nfsd4_compoundargs *argp,
 			     struct nfsd4_destroy_session *destroy_session)
 {
-	return nfsd4_decode_sessionid4(argp, &destroy_session->sessionid);
+	__be32 status;
+
+	status = nfsd4_decode_sessionid4(argp, &destroy_session->sessionid);
+	if (status)
+		return status;
+
+	trace_dec_destroy_session4args(argp, destroy_session);
+	return nfs_ok;
 }
 
 static __be32
@@ -4882,6 +4889,13 @@ nfsd4_encode_destroy_clientid(struct nfsd4_compoundres *resp, __be32 nfserr, voi
 }
 
 static __be32
+nfsd4_encode_destroy_session(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_destroy_session4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_offload_status(struct nfsd4_compoundres *resp, __be32 nfserr,
 			    struct nfsd4_offload_status *os)
 {
@@ -5386,7 +5400,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_BIND_CONN_TO_SESSION] = (nfsd4_enc)nfsd4_encode_bind_conn_to_session,
 	[OP_EXCHANGE_ID]	= (nfsd4_enc)nfsd4_encode_exchange_id,
 	[OP_CREATE_SESSION]	= (nfsd4_enc)nfsd4_encode_create_session,
-	[OP_DESTROY_SESSION]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_DESTROY_SESSION]	= (nfsd4_enc)nfsd4_encode_destroy_session,
 	[OP_FREE_STATEID]	= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_GET_DIR_DELEGATION]	= (nfsd4_enc)nfsd4_encode_noop,
 #ifdef CONFIG_NFSD_PNFS

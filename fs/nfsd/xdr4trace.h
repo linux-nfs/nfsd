@@ -163,6 +163,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_clone4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_deallocate4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_delegreturn4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_clientid4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_session4resok);
 
 
 /**
@@ -699,6 +700,28 @@ TRACE_EVENT(dec_destroy_clientid4args,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS
+	)
+);
+
+TRACE_EVENT(dec_destroy_session4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_destroy_session *destroy_session
+	),
+	TP_ARGS(argp, destroy_session),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__array(u8, sessionid, NFS4_MAX_SESSIONID_LEN)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		memcpy(__entry->sessionid, &destroy_session->sessionid,
+		       NFS4_MAX_SESSIONID_LEN);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "sessionid=%s",
+		TRACE_XDR_CMPD_VARARGS, show_nfs4_sessionid(__entry->sessionid)
 	)
 );
 
