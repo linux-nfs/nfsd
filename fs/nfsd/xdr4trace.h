@@ -993,6 +993,38 @@ TRACE_EVENT(dec_layoutget4args,
 	)
 );
 
+TRACE_EVENT(dec_layoutreturn4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_layoutreturn *lrp
+	),
+	TP_ARGS(argp, lrp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, layout_type)
+		__field(u64, offset)
+		__field(u64, length)
+		__field(unsigned long, return_type)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->layout_type = lrp->lr_layout_type;
+		__entry->offset = lrp->lr_seg.offset;
+		__entry->length = lrp->lr_seg.length;
+		__entry->return_type = lrp->lr_return_type;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT
+		"layout_type=%s offset=%llu length=%llu return_type=%s",
+		TRACE_XDR_CMPD_VARARGS,
+		show_pnfs_layout_type(__entry->layout_type),
+		__entry->offset, __entry->length,
+		show_pnfs_return_type(__entry->return_type)
+	)
+);
+
+
 /**
  ** Server-side result encoding tracepoints
  **/
@@ -1365,6 +1397,30 @@ TRACE_EVENT(enc_layoutget4resok,
 		show_pnfs_layout_type(__entry->layout_type),
 		show_pnfs_layout_iomode(__entry->iomode),
 		__entry->offset, __entry->length
+	)
+);
+
+TRACE_EVENT(enc_layoutreturn4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_layoutreturn *lrp
+	),
+	TP_ARGS(resp, lrp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(bool, present)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&lrp->lr_sid);
+
+		__entry->present = !!lrp->lrs_present;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT "%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->present ? " (present)" : ""
 	)
 );
 

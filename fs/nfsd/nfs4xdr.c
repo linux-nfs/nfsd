@@ -1854,6 +1854,8 @@ static __be32
 nfsd4_decode_layoutreturn(struct nfsd4_compoundargs *argp,
 		struct nfsd4_layoutreturn *lrp)
 {
+	__be32 status;
+
 	memset(lrp, 0, sizeof(*lrp));
 	if (xdr_stream_decode_bool(argp->xdr, &lrp->lr_reclaim) < 0)
 		return nfserr_bad_xdr;
@@ -1861,7 +1863,12 @@ nfsd4_decode_layoutreturn(struct nfsd4_compoundargs *argp,
 		return nfserr_bad_xdr;
 	if (xdr_stream_decode_u32(argp->xdr, &lrp->lr_seg.iomode) < 0)
 		return nfserr_bad_xdr;
-	return nfsd4_decode_layoutreturn4(argp, lrp);
+	status = nfsd4_decode_layoutreturn4(argp, lrp);
+	if (status)
+		return status;
+
+	trace_dec_layoutreturn4args(argp, lrp);
+	return nfs_ok;
 }
 #endif /* CONFIG_NFSD_PNFS */
 
@@ -4857,15 +4864,19 @@ nfsd4_encode_layoutreturn(struct nfsd4_compoundres *resp, __be32 nfserr,
 		struct nfsd4_layoutreturn *lrp)
 {
 	struct xdr_stream *xdr = resp->xdr;
-	__be32 *p;
+	__be32 *p, status;
 
 	p = xdr_reserve_space(xdr, 4);
 	if (!p)
 		return nfserr_resource;
 	*p++ = cpu_to_be32(lrp->lrs_present);
-	if (lrp->lrs_present)
-		return nfsd4_encode_stateid(xdr, &lrp->lr_sid);
-	return 0;
+	if (lrp->lrs_present) {
+		status = nfsd4_encode_stateid(xdr, &lrp->lr_sid);
+		if (status)
+			return status;
+	}
+	trace_enc_layoutreturn4resok(resp, lrp);
+	return nfs_ok;
 }
 #endif /* CONFIG_NFSD_PNFS */
 
