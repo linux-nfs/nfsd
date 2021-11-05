@@ -1885,7 +1885,14 @@ nfsd4_decode_test_stateid(struct nfsd4_compoundargs *argp, struct nfsd4_test_sta
 static __be32 nfsd4_decode_destroy_clientid(struct nfsd4_compoundargs *argp,
 					    struct nfsd4_destroy_clientid *dc)
 {
-	return nfsd4_decode_clientid4(argp, &dc->clientid);
+	__be32 status;
+
+	status = nfsd4_decode_clientid4(argp, &dc->clientid);
+	if (status)
+		return status;
+
+	trace_dec_destroy_clientid4args(argp, dc);
+	return nfs_ok;
 }
 
 static __be32 nfsd4_decode_reclaim_complete(struct nfsd4_compoundargs *argp,
@@ -4868,6 +4875,13 @@ nfsd4_encode_deallocate(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
 }
 
 static __be32
+nfsd4_encode_destroy_clientid(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_destroy_clientid4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_encode_offload_status(struct nfsd4_compoundres *resp, __be32 nfserr,
 			    struct nfsd4_offload_status *os)
 {
@@ -5393,7 +5407,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_SET_SSV]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_TEST_STATEID]	= (nfsd4_enc)nfsd4_encode_test_stateid,
 	[OP_WANT_DELEGATION]	= (nfsd4_enc)nfsd4_encode_noop,
-	[OP_DESTROY_CLIENTID]	= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_DESTROY_CLIENTID]	= (nfsd4_enc)nfsd4_encode_destroy_clientid,
 	[OP_RECLAIM_COMPLETE]	= (nfsd4_enc)nfsd4_encode_noop,
 
 	/* NFSv4.2 operations */

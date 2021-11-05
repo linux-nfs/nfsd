@@ -162,6 +162,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_backchannel_ctl4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_clone4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_deallocate4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_delegreturn4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_clientid4resok);
 
 
 /**
@@ -679,6 +680,25 @@ TRACE_EVENT(dec_delegreturn4args,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT,
 		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS
+	)
+);
+
+TRACE_EVENT(dec_destroy_clientid4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_destroy_clientid *dc
+	),
+	TP_ARGS(argp, dc),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_CLID_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_CLID_ASSIGNS(dc->clientid);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_CLID_FORMAT,
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_CLID_VARARGS
 	)
 );
 
