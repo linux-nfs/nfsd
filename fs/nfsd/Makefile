@@ -8,7 +8,7 @@ ccflags-y += -I$(src)			# needed for trace events
 obj-$(CONFIG_NFSD)	+= nfsd.o
 
 # this one should be compiled first, as the tracing macros can easily blow up
-nfsd-y			+= trace.o
+nfsd-y			+= trace.o xdrtrace.o
 
 nfsd-y 			+= nfssvc.o nfsctl.o nfsproc.o nfsfh.o vfs.o \
 			   export.o auth.o lockd.o nfscache.o nfsxdr.o \
