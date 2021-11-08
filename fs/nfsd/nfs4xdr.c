@@ -1846,6 +1846,7 @@ nfsd4_decode_layoutget(struct nfsd4_compoundargs *argp,
 	if (xdr_stream_decode_u32(argp->xdr, &lgp->lg_maxcount) < 0)
 		return nfserr_bad_xdr;
 
+	trace_dec_layoutget4args(argp, lgp);
 	return nfs_ok;
 }
 
@@ -4802,7 +4803,7 @@ nfsd4_encode_layoutget(struct nfsd4_compoundres *resp, __be32 nfserr,
 {
 	struct xdr_stream *xdr = resp->xdr;
 	const struct nfsd4_layout_ops *ops;
-	__be32 *p;
+	__be32 *p, status;
 
 	p = xdr_reserve_space(xdr, 36 + sizeof(stateid_opaque_t));
 	if (!p)
@@ -4820,7 +4821,12 @@ nfsd4_encode_layoutget(struct nfsd4_compoundres *resp, __be32 nfserr,
 	*p++ = cpu_to_be32(lgp->lg_layout_type);
 
 	ops = nfsd4_layout_ops[lgp->lg_layout_type];
-	return ops->encode_layoutget(xdr, lgp);
+	status = ops->encode_layoutget(xdr, lgp);
+	if (status)
+		return status;
+
+	trace_enc_layoutget4resok(resp, lgp);
+	return nfs_ok;
 }
 
 static __be32

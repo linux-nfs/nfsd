@@ -953,6 +953,45 @@ TRACE_EVENT(dec_layoutcommit4args,
 	)
 );
 
+TRACE_EVENT(dec_layoutget4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_layoutget *lgp
+	),
+	TP_ARGS(argp, lgp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(bool, layout_avail)
+		__field(unsigned long, layout_type)
+		__field(unsigned long, iomode)
+		__field(u64, offset)
+		__field(u64, length)
+		__field(u64, minlength)
+		__field(u32, maxcount)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&lgp->lg_sid);
+
+		__entry->layout_avail = !!lgp->lg_signal;
+		__entry->layout_type = lgp->lg_layout_type;
+		__entry->iomode = lgp->lg_seg.iomode;
+		__entry->offset = lgp->lg_seg.offset;
+		__entry->length = lgp->lg_seg.length;
+		__entry->minlength = lgp->lg_minlength;
+		__entry->maxcount = lgp->lg_maxcount;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"type=%s iomode=%s offset=%llu length=%llu%s",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		show_pnfs_layout_type(__entry->layout_type),
+		show_pnfs_layout_iomode(__entry->iomode),
+		__entry->offset, __entry->length,
+		__entry->layout_avail ? " (available)" : ""
+	)
+);
 
 /**
  ** Server-side result encoding tracepoints
@@ -1293,6 +1332,39 @@ TRACE_EVENT(enc_layoutcommit4resok,
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT "newsize=%llu",
 		TRACE_XDR_CMPD_VARARGS, __entry->newsize
+	)
+);
+
+TRACE_EVENT(enc_layoutget4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_layoutget *lgp
+	),
+	TP_ARGS(resp, lgp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u64, offset)
+		__field(u64, length)
+		__field(unsigned long, iomode)
+		__field(unsigned long, layout_type)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+		TRACE_NFS4_STATEID_ASSIGNS(&lgp->lg_sid);
+
+		__entry->offset = lgp->lg_seg.offset;
+		__entry->length = lgp->lg_seg.length;
+		__entry->iomode = lgp->lg_seg.iomode;
+		__entry->layout_type = lgp->lg_layout_type;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"type=%s iomode=%s offset=%llu length=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		show_pnfs_layout_type(__entry->layout_type),
+		show_pnfs_layout_iomode(__entry->iomode),
+		__entry->offset, __entry->length
 	)
 );
 
