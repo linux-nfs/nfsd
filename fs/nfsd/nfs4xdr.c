@@ -1389,6 +1389,13 @@ nfsd4_decode_readdir(struct nfsd4_compoundargs *argp, struct nfsd4_readdir *read
 }
 
 static __be32
+nfsd4_decode_readlink(struct nfsd4_compoundargs *argp, void *p)
+{
+	trace_dec_readlink4args(argp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_remove(struct nfsd4_compoundargs *argp, struct nfsd4_remove *remove)
 {
 	memset(&remove->rm_cinfo, 0, sizeof(remove->rm_cinfo));
@@ -2531,7 +2538,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_PUTROOTFH]		= (nfsd4_dec)nfsd4_decode_putrootfh,
 	[OP_READ]		= (nfsd4_dec)nfsd4_decode_read,
 	[OP_READDIR]		= (nfsd4_dec)nfsd4_decode_readdir,
-	[OP_READLINK]		= (nfsd4_dec)nfsd4_decode_noop,
+	[OP_READLINK]		= (nfsd4_dec)nfsd4_decode_readlink,
 	[OP_REMOVE]		= (nfsd4_dec)nfsd4_decode_remove,
 	[OP_RENAME]		= (nfsd4_dec)nfsd4_decode_rename,
 	[OP_RENEW]		= (nfsd4_dec)nfsd4_decode_renew,
@@ -4478,6 +4485,7 @@ nfsd4_encode_readlink(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd
 	xdr_truncate_encode(xdr, length_offset + 4 + xdr_align_size(maxcount));
 	write_bytes_to_xdr_buf(xdr->buf, length_offset + 4 + maxcount, &zero,
 			       xdr_pad_size(maxcount));
+	trace_enc_readlink4resok(resp, readlink, maxcount);
 	return nfs_ok;
 
 out_err:

@@ -161,6 +161,7 @@ DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_getfh4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_lookupp4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_putpubfh4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_putrootfh4args);
+DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_readlink4args);
 
 DECLARE_EVENT_CLASS(svc_xdr_noop4res_class,
 	TP_PROTO(
@@ -2412,6 +2413,27 @@ TRACE_EVENT(enc_entry4,
 	)
 );
 
+TRACE_EVENT(enc_readlink4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_readlink *readlink,
+		int count
+	),
+	TP_ARGS(resp, readlink, count),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u32, count)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->count = count;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%u",
+		TRACE_XDR_CMPD_VARARGS, __entry->count
+	)
+);
 
 /**
  ** FATTR4 tracepoints
