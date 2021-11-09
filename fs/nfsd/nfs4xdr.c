@@ -1348,6 +1348,24 @@ nfsd4_decode_read(struct nfsd4_compoundargs *argp, struct nfsd4_read *read)
 }
 
 static __be32
+nfsd4_decode_read_plus(struct nfsd4_compoundargs *argp,
+		       struct nfsd4_read *read)
+{
+	__be32 status;
+
+	status = nfsd4_decode_stateid4(argp, &read->rd_stateid);
+	if (status)
+		return status;
+	if (xdr_stream_decode_u64(argp->xdr, &read->rd_offset) < 0)
+		return nfserr_bad_xdr;
+	if (xdr_stream_decode_u32(argp->xdr, &read->rd_length) < 0)
+		return nfserr_bad_xdr;
+
+	trace_dec_read_plus4args(argp, read);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_readdir(struct nfsd4_compoundargs *argp, struct nfsd4_readdir *readdir)
 {
 	__be32 status;
@@ -2565,7 +2583,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_LAYOUTSTATS]	= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_OFFLOAD_CANCEL]	= (nfsd4_dec)nfsd4_decode_offload_cancel,
 	[OP_OFFLOAD_STATUS]	= (nfsd4_dec)nfsd4_decode_offload_status,
-	[OP_READ_PLUS]		= (nfsd4_dec)nfsd4_decode_read,
+	[OP_READ_PLUS]		= (nfsd4_dec)nfsd4_decode_read_plus,
 	[OP_SEEK]		= (nfsd4_dec)nfsd4_decode_seek,
 	[OP_WRITE_SAME]		= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_CLONE]		= (nfsd4_dec)nfsd4_decode_clone,
@@ -5256,6 +5274,7 @@ nfsd4_encode_read_plus_data(struct nfsd4_compoundres *resp,
 	tmp = xdr_zero;
 	write_bytes_to_xdr_buf(xdr->buf, starting_len + 16 + *maxcount, &tmp,
 			       xdr_pad_size(*maxcount));
+	trace_enc_read_plus_data4resok(resp, read, *maxcount, *eof);
 	return nfs_ok;
 }
 
@@ -5287,6 +5306,7 @@ nfsd4_encode_read_plus_hole(struct nfsd4_compoundres *resp,
 
 	*eof = (read->rd_offset + count) >= f_size;
 	*maxcount = min_t(unsigned long, count, *maxcount);
+	trace_enc_read_plus_hole4resok(resp, read, count, *eof);
 	return nfs_ok;
 }
 

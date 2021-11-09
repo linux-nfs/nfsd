@@ -1502,6 +1502,33 @@ TRACE_EVENT(dec_read4args,
 	)
 );
 
+TRACE_EVENT(dec_read_plus4args,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct nfsd4_read *read
+	),
+	TP_ARGS(argp, read),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+		TRACE_NFS4_STATEID_FIELDS
+
+		__field(u32, count)
+		__field(u64, offset)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+		TRACE_NFS4_STATEID_ASSIGNS(&read->rd_stateid);
+
+		__entry->count = read->rd_length;
+		__entry->offset = read->rd_offset;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT TRACE_NFS4_STATEID_FORMAT
+		"count=%u offset=%llu",
+		TRACE_XDR_CMPD_VARARGS, TRACE_NFS4_STATEID_VARARGS,
+		__entry->count, __entry->offset
+	)
+);
+
 
 /**
  ** Server-side result encoding tracepoints
@@ -2237,6 +2264,62 @@ TRACE_EVENT(enc_read4resok,
 
 		__entry->eof = !!read->rd_eof;
 		__entry->count = read->rd_length;
+		__entry->offset = read->rd_offset;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%u offset=%llu%s",
+		TRACE_XDR_CMPD_VARARGS, __entry->count, __entry->offset,
+		__entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_read_plus_data4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_read *read,
+		unsigned long count,
+		u32 eof
+	),
+	TP_ARGS(resp, read, count, eof),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(bool, eof)
+		__field(u32, count)
+		__field(u64, offset)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->eof = !!eof;
+		__entry->count = count;
+		__entry->offset = read->rd_offset;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%u offset=%llu%s",
+		TRACE_XDR_CMPD_VARARGS, __entry->count, __entry->offset,
+		__entry->eof ? " (eof)" : ""
+	)
+);
+
+TRACE_EVENT(enc_read_plus_hole4resok,
+	TP_PROTO(
+		const struct nfsd4_compoundres *resp,
+		const struct nfsd4_read *read,
+		unsigned long count,
+		u32 eof
+	),
+	TP_ARGS(resp, read, count, eof),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(bool, eof)
+		__field(u32, count)
+		__field(u64, offset)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_RES_ASSIGNS(resp);
+
+		__entry->eof = !!eof;
+		__entry->count = count;
 		__entry->offset = read->rd_offset;
 	),
 	TP_printk(TRACE_XDR_CMPD_FORMAT "count=%u offset=%llu%s",
