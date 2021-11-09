@@ -1441,6 +1441,13 @@ nfsd4_decode_renew(struct nfsd4_compoundargs *argp, clientid_t *clientid)
 }
 
 static __be32
+nfsd4_decode_restorefh(struct nfsd4_compoundargs *argp, void *p)
+{
+	trace_dec_restorefh4args(argp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_secinfo(struct nfsd4_compoundargs *argp,
 		     struct nfsd4_secinfo *secinfo)
 {
@@ -2565,7 +2572,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_REMOVE]		= (nfsd4_dec)nfsd4_decode_remove,
 	[OP_RENAME]		= (nfsd4_dec)nfsd4_decode_rename,
 	[OP_RENEW]		= (nfsd4_dec)nfsd4_decode_renew,
-	[OP_RESTOREFH]		= (nfsd4_dec)nfsd4_decode_noop,
+	[OP_RESTOREFH]		= (nfsd4_dec)nfsd4_decode_restorefh,
 	[OP_SAVEFH]		= (nfsd4_dec)nfsd4_decode_noop,
 	[OP_SECINFO]		= (nfsd4_dec)nfsd4_decode_secinfo,
 	[OP_SETATTR]		= (nfsd4_dec)nfsd4_decode_setattr,
@@ -4655,6 +4662,13 @@ nfsd4_encode_renew(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
 }
 
 static __be32
+nfsd4_encode_restorefh(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_restorefh4resok(resp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_do_encode_secinfo(struct xdr_stream *xdr, struct svc_export *exp)
 {
 	u32 i, nflavs, supported;
@@ -5768,7 +5782,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_REMOVE]		= (nfsd4_enc)nfsd4_encode_remove,
 	[OP_RENAME]		= (nfsd4_enc)nfsd4_encode_rename,
 	[OP_RENEW]		= (nfsd4_enc)nfsd4_encode_renew,
-	[OP_RESTOREFH]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_RESTOREFH]		= (nfsd4_enc)nfsd4_encode_restorefh,
 	[OP_SAVEFH]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_SECINFO]		= (nfsd4_enc)nfsd4_encode_secinfo,
 	[OP_SETATTR]		= (nfsd4_enc)nfsd4_encode_setattr,

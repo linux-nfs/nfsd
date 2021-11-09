@@ -162,6 +162,7 @@ DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_lookupp4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_putpubfh4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_putrootfh4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_readlink4args);
+DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_restorefh4args);
 
 DECLARE_EVENT_CLASS(svc_xdr_noop4res_class,
 	TP_PROTO(
@@ -202,6 +203,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_putrootfh4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_reclaim_complete4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_release_lockowner4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_renew4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_restorefh4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
