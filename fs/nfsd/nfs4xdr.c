@@ -1323,6 +1323,13 @@ nfsd4_decode_putpubfh(struct nfsd4_compoundargs *argp, void *p)
 }
 
 static __be32
+nfsd4_decode_putrootfh(struct nfsd4_compoundargs *argp, void *p)
+{
+	trace_dec_putrootfh4args(argp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_read(struct nfsd4_compoundargs *argp, struct nfsd4_read *read)
 {
 	__be32 status;
@@ -2501,7 +2508,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_OPEN_DOWNGRADE]	= (nfsd4_dec)nfsd4_decode_open_downgrade,
 	[OP_PUTFH]		= (nfsd4_dec)nfsd4_decode_putfh,
 	[OP_PUTPUBFH]		= (nfsd4_dec)nfsd4_decode_putpubfh,
-	[OP_PUTROOTFH]		= (nfsd4_dec)nfsd4_decode_noop,
+	[OP_PUTROOTFH]		= (nfsd4_dec)nfsd4_decode_putrootfh,
 	[OP_READ]		= (nfsd4_dec)nfsd4_decode_read,
 	[OP_READDIR]		= (nfsd4_dec)nfsd4_decode_readdir,
 	[OP_READLINK]		= (nfsd4_dec)nfsd4_decode_noop,
@@ -4268,6 +4275,13 @@ nfsd4_encode_putpubfh(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
 	return nfs_ok;
 }
 
+static __be32
+nfsd4_encode_putrootfh(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_putrootfh4resok(resp);
+	return nfs_ok;
+}
+
 static __be32 nfsd4_encode_splice_read(
 				struct nfsd4_compoundres *resp,
 				struct nfsd4_read *read,
@@ -5662,7 +5676,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_OPEN_DOWNGRADE]	= (nfsd4_enc)nfsd4_encode_open_downgrade,
 	[OP_PUTFH]		= (nfsd4_enc)nfsd4_encode_putfh,
 	[OP_PUTPUBFH]		= (nfsd4_enc)nfsd4_encode_putpubfh,
-	[OP_PUTROOTFH]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_PUTROOTFH]		= (nfsd4_enc)nfsd4_encode_putrootfh,
 	[OP_READ]		= (nfsd4_enc)nfsd4_encode_read,
 	[OP_READDIR]		= (nfsd4_enc)nfsd4_encode_readdir,
 	[OP_READLINK]		= (nfsd4_enc)nfsd4_encode_readlink,
