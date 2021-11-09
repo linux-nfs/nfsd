@@ -1027,6 +1027,13 @@ nfsd4_decode_lookup(struct nfsd4_compoundargs *argp, struct nfsd4_lookup *lookup
 }
 
 static __be32
+nfsd4_decode_lookupp(struct nfsd4_compoundargs *argp, void *p)
+{
+	trace_dec_lookupp4args(argp);
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open)
 {
 	__be32 status;
@@ -2426,7 +2433,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_LOCKT]		= (nfsd4_dec)nfsd4_decode_lockt,
 	[OP_LOCKU]		= (nfsd4_dec)nfsd4_decode_locku,
 	[OP_LOOKUP]		= (nfsd4_dec)nfsd4_decode_lookup,
-	[OP_LOOKUPP]		= (nfsd4_dec)nfsd4_decode_noop,
+	[OP_LOOKUPP]		= (nfsd4_dec)nfsd4_decode_lookupp,
 	[OP_NVERIFY]		= (nfsd4_dec)nfsd4_decode_verify,
 	[OP_OPEN]		= (nfsd4_dec)nfsd4_decode_open,
 	[OP_OPENATTR]		= (nfsd4_dec)nfsd4_decode_notsupp,
@@ -4032,6 +4039,13 @@ nfsd4_encode_lookup(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
 }
 
 static __be32
+nfsd4_encode_lookupp(struct nfsd4_compoundres *resp, __be32 nfserr, void *p)
+{
+	trace_enc_lookupp4resok(resp);
+	return nfserr;
+}
+
+static __be32
 nfsd4_encode_link(struct nfsd4_compoundres *resp, __be32 nfserr, struct nfsd4_link *link)
 {
 	struct xdr_stream *xdr = resp->xdr;
@@ -5533,7 +5547,7 @@ static const nfsd4_enc nfsd4_enc_ops[] = {
 	[OP_LOCKT]		= (nfsd4_enc)nfsd4_encode_lockt,
 	[OP_LOCKU]		= (nfsd4_enc)nfsd4_encode_locku,
 	[OP_LOOKUP]		= (nfsd4_enc)nfsd4_encode_lookup,
-	[OP_LOOKUPP]		= (nfsd4_enc)nfsd4_encode_noop,
+	[OP_LOOKUPP]		= (nfsd4_enc)nfsd4_encode_lookupp,
 	[OP_NVERIFY]		= (nfsd4_enc)nfsd4_encode_noop,
 	[OP_OPEN]		= (nfsd4_enc)nfsd4_encode_open,
 	[OP_OPENATTR]		= (nfsd4_enc)nfsd4_encode_noop,

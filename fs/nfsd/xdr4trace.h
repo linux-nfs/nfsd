@@ -158,6 +158,7 @@ DEFINE_EVENT(svc_xdr_noop4args_class, name, \
 	TP_ARGS(argp))
 
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_getfh4args);
+DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_lookupp4args);
 
 DECLARE_EVENT_CLASS(svc_xdr_noop4res_class,
 	TP_PROTO(
@@ -189,6 +190,7 @@ DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_clientid4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_destroy_session4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_free_stateid4resok);
 DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_lookup4resok);
+DEFINE_SVC_XDR_NOOP4RES_EVENT(enc_lookupp4resok);
 
 DECLARE_EVENT_CLASS(svc_xdr_enc_u64_class,
 	TP_PROTO(
