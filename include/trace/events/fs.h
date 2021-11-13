@@ -150,3 +150,18 @@
 		{ S_IFBLK,		"BLK" }, \
 		{ S_IFIFO,		"FIFO" }, \
 		{ S_IFSOCK,		"SOCK" })
+
+#define show_fs_umode(x) \
+	__print_flags(flags, "|", \
+		{ S_IXOTH,		"XOTH" }, \
+		{ S_IWOTH,		"WOTH" }, \
+		{ S_IROTH,		"ROTH" }, \
+		{ S_IXGRP,		"XGRP" }, \
+		{ S_IWGRP,		"WGRP" }, \
+		{ S_IRGRP,		"RGRP" }, \
+		{ S_IXUSR,		"XUSR" }, \
+		{ S_IWUSR,		"WUSR" }, \
+		{ S_IRUSR,		"WUSR" }, \
+		{ S_ISVTX,		"SVTX" }, \
+		{ S_ISGID,		"SGID" }, \
+		{ S_ISUID,		"SUID" })
