@@ -409,6 +409,7 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 			return nfserr_bad_xdr;
 		iattr->ia_size = size;
 		iattr->ia_valid |= ATTR_SIZE;
+		trace_dec_fattr4_size(argp, size);
 	}
 	if (bmval[0] & FATTR4_WORD0_ACL) {
 		status = nfsd4_decode_acl(argp, acl);
@@ -424,6 +425,7 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 		iattr->ia_mode = mode;
 		iattr->ia_mode &= (S_IFMT | S_IALLUGO);
 		iattr->ia_valid |= ATTR_MODE;
+		trace_dec_fattr4_mode(argp, iattr->ia_mode);
 	}
 	if (bmval[1] & FATTR4_WORD1_OWNER) {
 		u32 length;
@@ -438,6 +440,7 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 		if (status)
 			return status;
 		iattr->ia_valid |= ATTR_UID;
+		trace_dec_fattr4_owner(argp, (char *)p, length);
 	}
 	if (bmval[1] & FATTR4_WORD1_OWNER_GROUP) {
 		u32 length;
@@ -452,6 +455,7 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 		if (status)
 			return status;
 		iattr->ia_valid |= ATTR_GID;
+		trace_dec_fattr4_group(argp, (char *)p, length);
 	}
 	if (bmval[1] & FATTR4_WORD1_TIME_ACCESS_SET) {
 		u32 set_it;
@@ -464,9 +468,11 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 			if (status)
 				return status;
 			iattr->ia_valid |= (ATTR_ATIME | ATTR_ATIME_SET);
+			trace_dec_fattr4_time_access(argp, &iattr->ia_atime);
 			break;
 		case NFS4_SET_TO_SERVER_TIME:
 			iattr->ia_valid |= ATTR_ATIME;
+			trace_dec_fattr4_time_access_server(argp);
 			break;
 		default:
 			return nfserr_bad_xdr;
@@ -492,9 +498,11 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 			if (status)
 				return status;
 			iattr->ia_valid |= (ATTR_MTIME | ATTR_MTIME_SET);
+			trace_dec_fattr4_time_modify(argp, &iattr->ia_mtime);
 			break;
 		case NFS4_SET_TO_SERVER_TIME:
 			iattr->ia_valid |= ATTR_MTIME;
+			trace_dec_fattr4_time_modify_server(argp);
 			break;
 		default:
 			return nfserr_bad_xdr;
@@ -519,6 +527,7 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 			return nfserr_bad_xdr;
 		*umask = mask & S_IRWXUGO;
 		iattr->ia_valid |= ATTR_MODE;
+		trace_dec_fattr4_umask(argp, mask);
 	}
 
 	/* request sanity: did attrlist4 contain the expected number of words? */

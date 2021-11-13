@@ -165,6 +165,30 @@ DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_readlink4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_restorefh4args);
 DEFINE_SVC_XDR_NOOP4ARGS_EVENT(dec_savefh4args);
 
+DECLARE_EVENT_CLASS(svc_xdr_server_time4_class,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp
+	),
+	TP_ARGS(argp),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT, TRACE_XDR_CMPD_VARARGS
+	)
+);
+#define DEFINE_SVC_XDR_SERVER_TIME4_EVENT(name) \
+DEFINE_EVENT(svc_xdr_server_time4_class, name, \
+	TP_PROTO( \
+		const struct nfsd4_compoundargs *argp \
+	), \
+	TP_ARGS(argp))
+
+DEFINE_SVC_XDR_SERVER_TIME4_EVENT(dec_fattr4_time_access_server);
+DEFINE_SVC_XDR_SERVER_TIME4_EVENT(dec_fattr4_time_modify_server);
+
 DECLARE_EVENT_CLASS(svc_xdr_noop4res_class,
 	TP_PROTO(
 		const struct nfsd4_compoundres *resp
@@ -2812,6 +2836,163 @@ TRACE_EVENT(enc_sequence4resok,
 /**
  ** FATTR4 tracepoints
  **/
+
+TRACE_EVENT(dec_fattr4_size,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		u64 size
+	),
+	TP_ARGS(argp, size),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(u64, size)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->size = size;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "%llu",
+		TRACE_XDR_CMPD_VARARGS, __entry->size
+	)
+);
+
+TRACE_EVENT(dec_fattr4_mode,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		umode_t mode
+	),
+	TP_ARGS(argp, mode),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, mode)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->mode = mode;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "mode=%lo %s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->mode, show_fs_umode(__entry->mode)
+	)
+);
+
+TRACE_EVENT(dec_fattr4_owner,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const char *owner,
+		size_t len
+	),
+	TP_ARGS(argp, owner, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(owner, owner, len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(owner, owner, len);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "owner='%s'",
+		TRACE_XDR_CMPD_VARARGS, __get_str(owner)
+	)
+);
+
+TRACE_EVENT(dec_fattr4_group,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const char *group,
+		size_t len
+	),
+	TP_ARGS(argp, group, len),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__string_len(group, group, len)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__assign_str_len(group, group, len);
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "group='%s'",
+		TRACE_XDR_CMPD_VARARGS, __get_str(group)
+	)
+);
+
+TRACE_EVENT(dec_fattr4_time_access,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct timespec64 *time
+	),
+	TP_ARGS(argp, time),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(s64, time_sec)
+		__field(long, time_nsec)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->time_sec = time->tv_sec;
+		__entry->time_nsec = time->tv_nsec;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "time=[%llx, %lx]",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->time_sec, __entry->time_nsec
+	)
+);
+
+TRACE_EVENT(dec_fattr4_time_modify,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		const struct timespec64 *time
+	),
+	TP_ARGS(argp, time),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(s64, time_sec)
+		__field(long, time_nsec)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->time_sec = time->tv_sec;
+		__entry->time_nsec = time->tv_nsec;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "time=[%llx, %lx]",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->time_sec, __entry->time_nsec
+	)
+);
+
+TRACE_EVENT(dec_fattr4_umask,
+	TP_PROTO(
+		const struct nfsd4_compoundargs *argp,
+		umode_t mode
+	),
+	TP_ARGS(argp, mode),
+	TP_STRUCT__entry(
+		TRACE_SVC_XDR_CMPD_FIELDS
+
+		__field(unsigned long, mode)
+	),
+	TP_fast_assign(
+		TRACE_SVC_XDR_CMPD_ARG_ASSIGNS(argp);
+
+		__entry->mode = mode;
+	),
+	TP_printk(TRACE_XDR_CMPD_FORMAT "mode=%lo %s",
+		TRACE_XDR_CMPD_VARARGS,
+		__entry->mode, show_fs_umode(__entry->mode)
+	)
+);
 
 TRACE_EVENT(enc_fattr4_supported_attrs,
 	TP_PROTO(
