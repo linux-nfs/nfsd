@@ -353,6 +353,8 @@ void fail_rdma_verbs_debugfs_init(void)
 			    &fail_rdma_verbs.ignore_alloc_mr);
 	debugfs_create_bool("ignore-modify-qp", S_IFREG | 0600, dir,
 			    &fail_rdma_verbs.ignore_modify_qp);
+	debugfs_create_bool("ignore-cq-errors", S_IFREG | 0600, dir,
+			    &fail_rdma_verbs.ignore_cq_errors);
 }
 
 #else /* CONFIG_FAIL_RDMA_VERBS */
@@ -2964,6 +2966,13 @@ static void ib_restore_posted_wr(struct ib_send_wr *wr, u32 saved_key)
 	}
 }
 
+static noinline void
+ib_maybe_fail_cq_error(struct ib_cq *cq)
+{
+	if (should_fail(&fail_rdma_verbs.attr, 1))
+		ib_resize_cq(cq, 2);
+}
+
 static noinline int
 ib_maybe_fail_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
 			const struct ib_send_wr **bad_wr)
@@ -3022,6 +3031,8 @@ int ib_post_send(struct ib_qp *qp, const struct ib_send_wr *send_wr,
 	const struct ib_send_wr *dummy;
 	const struct ib_send_wr **bad_wr = bad_send_wr ? : &dummy;
 
+	if (!fail_rdma_verbs.ignore_cq_errors)
+		ib_maybe_fail_cq_error(qp->send_cq);
 	if (!fail_rdma_verbs.ignore_post_send)
 		return ib_maybe_fail_post_send(qp, send_wr, bad_wr);
 	return qp->device->ops.post_send(qp, send_wr, bad_wr);
@@ -3081,6 +3092,8 @@ int ib_post_recv(struct ib_qp *qp, const struct ib_recv_wr *recv_wr,
 	const struct ib_recv_wr *dummy;
 	const struct ib_recv_wr **bad_wr = bad_recv_wr ? : &dummy;
 
+	if (!fail_rdma_verbs.ignore_cq_errors)
+		ib_maybe_fail_cq_error(qp->recv_cq);
 	if (!fail_rdma_verbs.ignore_post_recv)
 		return ib_maybe_fail_post_recv(qp, recv_wr, bad_wr);
 	return qp->device->ops.post_recv(qp, recv_wr, bad_wr);
