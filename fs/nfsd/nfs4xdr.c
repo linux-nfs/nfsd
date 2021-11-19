@@ -1446,9 +1446,9 @@ nfsd4_decode_setclientid_confirm(struct nfsd4_compoundargs *argp, struct nfsd4_s
 	return nfsd4_decode_verifier4(argp, &scd_c->sc_confirm);
 }
 
-/* Also used for NVERIFY */
 static __be32
-nfsd4_decode_verify(struct nfsd4_compoundargs *argp, struct nfsd4_verify *verify)
+nfsd4_decode_verify_bitmaps(struct nfsd4_compoundargs *argp,
+			    struct nfsd4_verify *verify)
 {
 	__be32 *p, status;
 
@@ -1472,6 +1472,18 @@ nfsd4_decode_verify(struct nfsd4_compoundargs *argp, struct nfsd4_verify *verify
 		return nfserr_jukebox;
 
 	return nfs_ok;
+}
+
+static __be32
+nfsd4_decode_nverify(struct nfsd4_compoundargs *argp, struct nfsd4_verify *nverify)
+{
+	return nfsd4_decode_verify_bitmaps(argp, nverify);
+}
+
+static __be32
+nfsd4_decode_verify(struct nfsd4_compoundargs *argp, struct nfsd4_verify *verify)
+{
+	return nfsd4_decode_verify_bitmaps(argp, verify);
 }
 
 static __be32
@@ -2434,7 +2446,7 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_LOCKU]		= (nfsd4_dec)nfsd4_decode_locku,
 	[OP_LOOKUP]		= (nfsd4_dec)nfsd4_decode_lookup,
 	[OP_LOOKUPP]		= (nfsd4_dec)nfsd4_decode_lookupp,
-	[OP_NVERIFY]		= (nfsd4_dec)nfsd4_decode_verify,
+	[OP_NVERIFY]		= (nfsd4_dec)nfsd4_decode_nverify,
 	[OP_OPEN]		= (nfsd4_dec)nfsd4_decode_open,
 	[OP_OPENATTR]		= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_OPEN_CONFIRM]	= (nfsd4_dec)nfsd4_decode_open_confirm,
