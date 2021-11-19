@@ -1883,6 +1883,21 @@ nfsd4_decode_fallocate(struct nfsd4_compoundargs *argp,
 	return nfs_ok;
 }
 
+static __be32
+nfsd4_decode_allocate(struct nfsd4_compoundargs *argp,
+		      struct nfsd4_fallocate *allocate)
+{
+	return nfsd4_decode_fallocate(argp, allocate);
+}
+
+static __be32
+nfsd4_decode_deallocate(struct nfsd4_compoundargs *argp,
+			struct nfsd4_fallocate *deallocate)
+{
+
+	return nfsd4_decode_fallocate(argp, deallocate);
+}
+
 static __be32 nfsd4_decode_nl4_server(struct nfsd4_compoundargs *argp,
 				      struct nl4_server *ns)
 {
@@ -2335,10 +2350,10 @@ static const nfsd4_dec nfsd4_dec_ops[] = {
 	[OP_RECLAIM_COMPLETE]	= (nfsd4_dec)nfsd4_decode_reclaim_complete,
 
 	/* new operations for NFSv4.2 */
-	[OP_ALLOCATE]		= (nfsd4_dec)nfsd4_decode_fallocate,
+	[OP_ALLOCATE]		= (nfsd4_dec)nfsd4_decode_allocate,
 	[OP_COPY]		= (nfsd4_dec)nfsd4_decode_copy,
 	[OP_COPY_NOTIFY]	= (nfsd4_dec)nfsd4_decode_copy_notify,
-	[OP_DEALLOCATE]		= (nfsd4_dec)nfsd4_decode_fallocate,
+	[OP_DEALLOCATE]		= (nfsd4_dec)nfsd4_decode_deallocate,
 	[OP_IO_ADVISE]		= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_LAYOUTERROR]	= (nfsd4_dec)nfsd4_decode_notsupp,
 	[OP_LAYOUTSTATS]	= (nfsd4_dec)nfsd4_decode_notsupp,
