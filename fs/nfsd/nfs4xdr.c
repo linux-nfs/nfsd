@@ -466,9 +466,9 @@ dprintk("in nfsd4_decode_posix_acl\n");
 		return nfserr_bad_xdr;
 dprintk("count=%d rem=%zu\n", count, xdr_stream_remaining(argp->xdr));
 
-	if (count > xdr_stream_remaining(argp->xdr) / 12)
+	if (count > xdr_stream_remaining(argp->xdr) / (3 * XDR_UNIT))
 		/*
-		 * Even with 0-byte names there wouldn't be
+		 * Even with 0-byte who strings there wouldn't be
 		 * space for that many aces; something fishy is
 		 * going on:
 		 */
