@@ -1235,10 +1235,8 @@ out:
 	nfsd_attrs_free(&attrs);
 	fh_drop_write(&cstate->current_fh);
 out_err:
-	if (setattr->sa_dpacl)
-		posix_acl_release(setattr->sa_dpacl);
-	if (setattr->sa_pacl)
-		posix_acl_release(setattr->sa_pacl);
+	posix_acl_release(setattr->sa_dpacl);
+	posix_acl_release(setattr->sa_pacl);
 	return status;
 }
 
