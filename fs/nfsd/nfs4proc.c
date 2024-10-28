@@ -391,9 +391,9 @@ set_attr:
 	if (attrs.na_aclerr)
 		open->op_bmval[0] &= ~FATTR4_WORD0_ACL;
 	if (attrs.na_dpaclerr)
-		open->op_bmval[0] &= ~FATTR4_WORD2_POSIX_DEFAULT_ACL;
+		open->op_bmval[2] &= ~FATTR4_WORD2_POSIX_DEFAULT_ACL;
 	if (attrs.na_paclerr)
-		open->op_bmval[0] &= ~FATTR4_WORD2_POSIX_ACCESS_ACL;
+		open->op_bmval[2] &= ~FATTR4_WORD2_POSIX_ACCESS_ACL;
 out:
 	inode_unlock(inode);
 	nfsd_attrs_free(&attrs);
@@ -894,9 +894,9 @@ nfsd4_create(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	if (attrs.na_aclerr)
 		create->cr_bmval[0] &= ~FATTR4_WORD0_ACL;
 	if (attrs.na_dpaclerr)
-		create->cr_bmval[0] &= ~FATTR4_WORD2_POSIX_DEFAULT_ACL;
+		create->cr_bmval[2] &= ~FATTR4_WORD2_POSIX_DEFAULT_ACL;
 	if (attrs.na_paclerr)
-		create->cr_bmval[0] &= ~FATTR4_WORD2_POSIX_ACCESS_ACL;
+		create->cr_bmval[2] &= ~FATTR4_WORD2_POSIX_ACCESS_ACL;
 	set_change_info(&create->cr_cinfo, &cstate->current_fh);
 	fh_dup2(&cstate->current_fh, &resfh);
 out:
