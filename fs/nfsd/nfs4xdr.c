@@ -3624,26 +3624,26 @@ static int nfsacl4_posix_tagtotype(u32 tag)
 	int type;
 
 	switch(tag) {
-		case ACL_USER_OBJ:
-			type = POSIXACE4_TAG_USER_OBJ;
-			break;
-		case ACL_GROUP_OBJ:
-			type = POSIXACE4_TAG_GROUP_OBJ;
-			break;
-		case ACL_USER:
-			type = POSIXACE4_TAG_USER;
-			break;
-		case ACL_GROUP:
-			type = POSIXACE4_TAG_GROUP;
-			break;
-		case ACL_MASK:
-			type = POSIXACE4_TAG_MASK;
-			break;
-		case ACL_OTHER:
-			type = POSIXACE4_TAG_OTHER;
-			break;
-		default:
-			return -EINVAL;
+	case ACL_USER_OBJ:
+		type = POSIXACE4_TAG_USER_OBJ;
+		break;
+	case ACL_GROUP_OBJ:
+		type = POSIXACE4_TAG_GROUP_OBJ;
+		break;
+	case ACL_USER:
+		type = POSIXACE4_TAG_USER;
+		break;
+	case ACL_GROUP:
+		type = POSIXACE4_TAG_GROUP;
+		break;
+	case ACL_MASK:
+		type = POSIXACE4_TAG_MASK;
+		break;
+	case ACL_OTHER:
+		type = POSIXACE4_TAG_OTHER;
+		break;
+	default:
+		return -EINVAL;
 	}
 	return type;
 }
@@ -3664,27 +3664,27 @@ dprintk("in xdr_nfs4ace_encode tag=%d\n", acep->e_tag);
 	if (xdr_stream_encode_u32(xdr, acep->e_perm) != XDR_UNIT)
 		return nfserr_resource;
 	switch(acep->e_tag) {
-		case ACL_USER_OBJ:
-		case ACL_GROUP_OBJ:
-		case ACL_MASK:
-		case ACL_OTHER:
+	case ACL_USER_OBJ:
+	case ACL_GROUP_OBJ:
+	case ACL_MASK:
+	case ACL_OTHER:
 dprintk("at encode 0\n");
-			if (xdr_stream_encode_u32(xdr, 0) != XDR_UNIT)
-				return nfserr_resource;
-			break;
-		case ACL_USER:
-			status = nfsd4_encode_user(xdr, rqstp, acep->e_uid);
-dprintk("encode_user %d\n", status);
-			if (status != nfs_ok)
-				return status;
-			break;
-		case ACL_GROUP:
-			status = nfsd4_encode_group(xdr, rqstp, acep->e_gid);
-			if (status != nfs_ok)
-				return status;
-			break;
-		default:
+		if (xdr_stream_encode_u32(xdr, 0) != XDR_UNIT)
 			return nfserr_resource;
+		break;
+	case ACL_USER:
+		status = nfsd4_encode_user(xdr, rqstp, acep->e_uid);
+dprintk("encode_user %d\n", status);
+		if (status != nfs_ok)
+			return status;
+		break;
+	case ACL_GROUP:
+		status = nfsd4_encode_group(xdr, rqstp, acep->e_gid);
+		if (status != nfs_ok)
+			return status;
+		break;
+	default:
+		return nfserr_resource;
 	}
 dprintk("encode_ace ret nfs_ok\n");
 	return nfs_ok;
