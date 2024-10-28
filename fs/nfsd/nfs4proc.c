@@ -91,6 +91,10 @@ check_attr_support(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 		return nfserr_attrnotsupp;
 	if ((bmval[0] & FATTR4_WORD0_ACL) && !IS_POSIXACL(d_inode(dentry)))
 		return nfserr_attrnotsupp;
+	if ((bmval[2] & (FATTR4_WORD2_POSIX_DEFAULT_ACL |
+					FATTR4_WORD2_POSIX_ACCESS_ACL)) &&
+					!IS_POSIXACL(d_inode(dentry)))
+		return nfserr_attrnotsupp;
 	if ((bmval[2] & FATTR4_WORD2_SECURITY_LABEL) &&
 			!(exp->ex_flags & NFSEXP_SECURITY_LABEL))
 		return nfserr_attrnotsupp;
@@ -261,8 +265,18 @@ nfsd4_create_file(struct svc_rqst *rqstp, struct svc_fh *fhp,
 	if (host_err)
 		return nfserrno(host_err);
 
-	if (is_create_with_attrs(open))
-		nfsd4_acl_to_attr(NF4REG, open->op_acl, &attrs);
+	if (open->op_acl) {
+		if (open->op_dpacl || open->op_pacl)
+			return nfserr_inval;
+		if (is_create_with_attrs(open))
+			nfsd4_acl_to_attr(NF4REG, open->op_acl, &attrs);
+	} else if (is_create_with_attrs(open)) {
+		/* The dpacl and pacl will get released by nfsd_attrs_free(). */
+		attrs.na_dpacl = open->op_dpacl;
+		attrs.na_pacl = open->op_pacl;
+		open->op_dpacl = NULL;
+		open->op_pacl = NULL;
+	}
 
 	inode_lock_nested(inode, I_MUTEX_PARENT);
 
@@ -376,6 +390,10 @@ set_attr:
 		open->op_bmval[2] &= ~FATTR4_WORD2_SECURITY_LABEL;
 	if (attrs.na_aclerr)
 		open->op_bmval[0] &= ~FATTR4_WORD0_ACL;
+	if (attrs.na_dpaclerr)
+		open->op_bmval[0] &= ~FATTR4_WORD2_POSIX_DEFAULT_ACL;
+	if (attrs.na_paclerr)
+		open->op_bmval[0] &= ~FATTR4_WORD2_POSIX_ACCESS_ACL;
 out:
 	inode_unlock(inode);
 	nfsd_attrs_free(&attrs);
@@ -544,8 +562,10 @@ nfsd4_open(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	open->op_rqstp = rqstp;
 
 	/* This check required by spec. */
-	if (open->op_create && open->op_claim_type != NFS4_OPEN_CLAIM_NULL)
-		return nfserr_inval;
+	if (open->op_create && open->op_claim_type != NFS4_OPEN_CLAIM_NULL) {
+		status = nfserr_inval;
+		goto out_err;
+	}
 
 	open->op_created = false;
 	/*
@@ -554,8 +574,10 @@ nfsd4_open(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	 */
 	if (nfsd4_has_session(cstate) &&
 	    !test_bit(NFSD4_CLIENT_RECLAIM_COMPLETE, &cstate->clp->cl_flags) &&
-	    open->op_claim_type != NFS4_OPEN_CLAIM_PREVIOUS)
-		return nfserr_grace;
+	    open->op_claim_type != NFS4_OPEN_CLAIM_PREVIOUS) {
+		status = nfserr_grace;
+		goto out_err;
+	}
 
 	if (nfsd4_has_session(cstate))
 		copy_clientid(&open->op_clientid, cstate->session);
@@ -642,6 +664,9 @@ out:
 	}
 	nfsd4_cleanup_open_state(cstate, open);
 	nfsd4_bump_seqid(cstate, status);
+out_err:
+	posix_release(open->op_dpacl);
+	posix_release(open->op_pacl);
 	return status;
 }
 
@@ -782,6 +807,8 @@ nfsd4_create(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	struct nfsd_attrs attrs = {
 		.na_iattr	= &create->cr_iattr,
 		.na_seclabel	= &create->cr_label,
+		.na_dpacl	= create->cr_dpacl,
+		.na_pacl	= create->cr_pacl,
 	};
 	struct svc_fh resfh;
 	__be32 status;
@@ -791,14 +818,21 @@ nfsd4_create(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 
 	status = fh_verify(rqstp, &cstate->current_fh, S_IFDIR, NFSD_MAY_NOP);
 	if (status)
-		return status;
+		goto out_aftermask;
 
 	status = check_attr_support(rqstp, cstate, create->cr_bmval,
 				    nfsd_attrmask);
 	if (status)
-		return status;
+		goto out_aftermask;
 
-	status = nfsd4_acl_to_attr(create->cr_type, create->cr_acl, &attrs);
+	if (create->cr_acl) {
+		if (create->cr_dpacl || create->cr_pacl) {
+			status = nfserr_inval;
+			goto out_aftermask;
+		}
+		status = nfsd4_acl_to_attr(create->cr_type, create->cr_acl,
+								&attrs);
+	}
 	current->fs->umask = create->cr_umask;
 	switch (create->cr_type) {
 	case NF4LNK:
@@ -859,12 +893,17 @@ nfsd4_create(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 		create->cr_bmval[2] &= ~FATTR4_WORD2_SECURITY_LABEL;
 	if (attrs.na_aclerr)
 		create->cr_bmval[0] &= ~FATTR4_WORD0_ACL;
+	if (attrs.na_dpaclerr)
+		create->cr_bmval[0] &= ~FATTR4_WORD2_POSIX_DEFAULT_ACL;
+	if (attrs.na_paclerr)
+		create->cr_bmval[0] &= ~FATTR4_WORD2_POSIX_ACCESS_ACL;
 	set_change_info(&create->cr_cinfo, &cstate->current_fh);
 	fh_dup2(&cstate->current_fh, &resfh);
 out:
 	fh_put(&resfh);
 out_umask:
 	current->fs->umask = 0;
+out_aftermask:
 	nfsd_attrs_free(&attrs);
 	return status;
 }
