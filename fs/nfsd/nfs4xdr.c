@@ -43,6 +43,7 @@
 #include <linux/sunrpc/addr.h>
 #include <linux/xattr.h>
 #include <linux/vmalloc.h>
+#include <linux/nfsacl.h>
 
 #include <uapi/linux/xattr.h>
 
@@ -378,15 +379,123 @@ nfsd4_decode_security_label(struct nfsd4_compoundargs *argp,
 }
 
 static __be32
+nfsacl4_posix_xdrtotag(struct xdr_stream *xdr, u32 *tag)
+{
+	u32 type;
+
+	if (xdr_stream_decode_u32(xdr, &type) < 0)
+		return nfserr_bad_xdr;
+	switch(type) {
+	case POSIXACE4_TAG_USER_OBJ:
+		*tag = ACL_USER_OBJ;
+		break;
+	case POSIXACE4_TAG_GROUP_OBJ:
+		*tag = ACL_GROUP_OBJ;
+		break;
+	case POSIXACE4_TAG_USER:
+		*tag = ACL_USER;
+		break;
+	case POSIXACE4_TAG_GROUP:
+		*tag = ACL_GROUP;
+		break;
+	case POSIXACE4_TAG_MASK:
+		*tag = ACL_MASK;
+		break;
+	case POSIXACE4_TAG_OTHER:
+		*tag = ACL_OTHER;
+		break;
+	default:
+		return nfserr_bad_xdr;
+	}
+	return nfs_ok;
+}
+
+static __be32
+nfsd4_decode_posixace4(struct nfsd4_compoundargs *argp,
+			struct posix_acl_entry *ace)
+{
+	u32 val;
+	__be32 *p, status;
+
+	status = nfsacl4_posix_xdrtotag(argp->xdr, &val);
+	if (status != nfs_ok)
+		return status;
+	ace->e_tag = val;
+	if (xdr_stream_decode_u32(argp->xdr, &val) < 0)
+		return nfserr_bad_xdr;
+dprintk("perm=%d\n", val);
+	if (val & ~S_IRWXO)
+		return nfserr_bad_xdr;
+	ace->e_perm = val;
+
+	if (xdr_stream_decode_u32(argp->xdr, &val) < 0)
+		return nfserr_bad_xdr;
+	p = xdr_inline_decode(argp->xdr, val);
+	if (!p)
+		return nfserr_bad_xdr;
+	switch(ace->e_tag) {
+	case ACL_USER:
+		status = nfsd_map_name_to_uid(argp->rqstp,
+				(char *)p, val, &ace->e_uid);
+		break;
+	case ACL_GROUP:
+		status = nfsd_map_name_to_gid(argp->rqstp,
+				(char *)p, val, &ace->e_gid);
+	}
+
+	return status;
+}
+
+static noinline __be32
+nfsd4_decode_posix_acl(struct nfsd4_compoundargs *argp, struct posix_acl **acl)
+{
+	struct posix_acl_entry *ace;
+	__be32 status;
+	u32 count;
+
+	if (xdr_stream_decode_u32(argp->xdr, &count) < 0)
+		return nfserr_bad_xdr;
+
+	if (count > xdr_stream_remaining(argp->xdr) / 16)
+		/*
+		 * Even with 4-byte names there wouldn't be
+		 * space for that many aces; something fishy is
+		 * going on:
+		 */
+		return nfserr_fbig;
+
+	*acl = posix_acl_alloc(count, GFP_NOFS);
+	if (*acl == NULL)
+		return nfserr_resource;
+
+	(*acl)->a_count = count;
+	for (ace = (*acl)->a_entries; ace < (*acl)->a_entries + count; ace++) {
+		status = nfsd4_decode_posixace4(argp, ace);
+		if (status) {
+			posix_acl_release(*acl);
+			*acl = NULL;
+			return status;
+		}
+	}
+
+	return nfs_ok;
+}
+
+static __be32
 nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 		    struct iattr *iattr, struct nfs4_acl **acl,
-		    struct xdr_netobj *label, int *umask)
+		    struct xdr_netobj *label, int *umask,
+		    struct posix_acl **dpaclp, struct posix_acl **paclp)
 {
 	unsigned int starting_pos;
 	u32 attrlist4_count;
 	__be32 *p, status;
 
 	iattr->ia_valid = 0;
+	if (dpaclp)
+		*dpaclp = NULL;
+	if (paclp)
+		*paclp = NULL;
 	status = nfsd4_decode_bitmap4(argp, bmval, bmlen);
 	if (status)
 		return nfserr_bad_xdr;
@@ -540,6 +649,28 @@ nfsd4_decode_fattr4(struct nfsd4_compoundargs *argp, u32 *bmval, u32 bmlen,
 		iattr->ia_ctime.tv_sec = modify.seconds;
 		iattr->ia_ctime.tv_nsec = modify.seconds;
 		iattr->ia_valid |= ATTR_CTIME | ATTR_MTIME | ATTR_MTIME_SET | ATTR_DELEG;
+	}
+	if (bmval[2] & FATTR4_WORD2_POSIX_DEFAULT_ACL) {
+		struct posix_acl *dpacl;
+
+		status = nfsd4_decode_posix_acl(argp, &dpacl);
+		if (status)
+			return status;
+		if (dpaclp)
+			*dpaclp = dpacl;
+		else
+			posix_acl_release(dpacl);
+	}
+	if (bmval[2] & FATTR4_WORD2_POSIX_ACCESS_ACL) {
+		struct posix_acl *pacl;
+
+		status = nfsd4_decode_posix_acl(argp, &pacl);
+		if (status)
+			return status;
+		if (paclp)
+			*paclp = pacl;
+		else
+			posix_acl_release(pacl);
 	}
 
 	/* request sanity: did attrlist4 contain the expected number of words? */
@@ -861,7 +992,8 @@ nfsd4_decode_create(struct nfsd4_compoundargs *argp, union nfsd4_op_u *u)
 	status = nfsd4_decode_fattr4(argp, create->cr_bmval,
 				    ARRAY_SIZE(create->cr_bmval),
 				    &create->cr_iattr, &create->cr_acl,
-				    &create->cr_label, &create->cr_umask);
+				    &create->cr_label, &create->cr_umask,
+				    NULL, NULL);
 	if (status)
 		return status;
 
@@ -1012,7 +1144,8 @@ nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open
 		status = nfsd4_decode_fattr4(argp, open->op_bmval,
 					     ARRAY_SIZE(open->op_bmval),
 					     &open->op_iattr, &open->op_acl,
-					     &open->op_label, &open->op_umask);
+					     &open->op_label, &open->op_umask,
+					     NULL, NULL);
 		if (status)
 			return status;
 		break;
@@ -1030,7 +1163,8 @@ nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open
 		status = nfsd4_decode_fattr4(argp, open->op_bmval,
 					     ARRAY_SIZE(open->op_bmval),
 					     &open->op_iattr, &open->op_acl,
-					     &open->op_label, &open->op_umask);
+					     &open->op_label, &open->op_umask,
+					     NULL, NULL);
 		if (status)
 			return status;
 		break;
@@ -1357,7 +1491,8 @@ nfsd4_decode_setattr(struct nfsd4_compoundargs *argp, union nfsd4_op_u *u)
 	return nfsd4_decode_fattr4(argp, setattr->sa_bmval,
 				   ARRAY_SIZE(setattr->sa_bmval),
 				   &setattr->sa_iattr, &setattr->sa_acl,
-				   &setattr->sa_label, NULL);
+				   &setattr->sa_label, NULL, &setattr->sa_dpacl,
+				   &setattr->sa_pacl);
 }
 
 static __be32
@@ -2945,6 +3080,8 @@ struct nfsd4_fattr_args {
 #ifdef CONFIG_NFSD_V4_SECURITY_LABEL
 	struct lsm_context	context;
 #endif
+	struct posix_acl	*dpacl;
+	struct posix_acl	*pacl;
 	u32			rdattr_err;
 	bool			contextsupport;
 	bool			ignore_crossmnt;
@@ -3457,6 +3594,134 @@ static __be32 nfsd4_encode_fattr4_open_arguments(struct xdr_stream *xdr,
 	return nfs_ok;
 }
 
+static __be32 nfsd4_encode_fattr4_acl_trueform(struct xdr_stream *xdr,
+					const struct nfsd4_fattr_args *args)
+{
+
+	return nfsd4_encode_uint32_t(xdr, ACL_MODEL_POSIX_DRAFT);
+}
+
+static __be32 nfsd4_encode_fattr4_acl_trueform_scope(struct xdr_stream *xdr,
+					const struct nfsd4_fattr_args *args)
+{
+
+	return nfsd4_encode_uint32_t(xdr, ACL_SCOPE_FILE_SYSTEM);
+}
+
+static int nfsacl4_posix_tagtotype(u32 tag)
+{
+	int type;
+
+	switch(tag) {
+		case ACL_USER_OBJ:
+			type = POSIXACE4_TAG_USER_OBJ;
+			break;
+		case ACL_GROUP_OBJ:
+			type = POSIXACE4_TAG_GROUP_OBJ;
+			break;
+		case ACL_USER:
+			type = POSIXACE4_TAG_USER;
+			break;
+		case ACL_GROUP:
+			type = POSIXACE4_TAG_GROUP;
+			break;
+		case ACL_MASK:
+			type = POSIXACE4_TAG_MASK;
+			break;
+		case ACL_OTHER:
+			type = POSIXACE4_TAG_OTHER;
+			break;
+		default:
+			return -EINVAL;
+	}
+	return type;
+}
+
+static __be32 xdr_nfs4ace_stream_encode(struct xdr_stream *xdr,
+				struct svc_rqst *rqstp,
+				struct posix_acl_entry *acep)
+{
+	__be32 status;
+	int type;
+
+dprintk("in xdr_nfs4ace_encode tag=%d\n", acep->e_tag);
+	type = nfsacl4_posix_tagtotype(acep->e_tag);
+	if (type < 0)
+		return nfserr_resource;
+	if (xdr_stream_encode_u32(xdr, type) != XDR_UNIT)
+		return nfserr_resource;
+	if (xdr_stream_encode_u32(xdr, acep->e_perm) != XDR_UNIT)
+		return nfserr_resource;
+	switch(acep->e_tag) {
+		case ACL_USER_OBJ:
+		case ACL_GROUP_OBJ:
+		case ACL_MASK:
+		case ACL_OTHER:
+dprintk("at encode 0\n");
+			if (xdr_stream_encode_u32(xdr, 0) != XDR_UNIT)
+				return nfserr_resource;
+			break;
+		case ACL_USER:
+			status = nfsd4_encode_user(xdr, rqstp, acep->e_uid);
+dprintk("encode_user %d\n", status);
+			if (status != nfs_ok)
+				return status;
+			break;
+		case ACL_GROUP:
+			status = nfsd4_encode_group(xdr, rqstp, acep->e_gid);
+			if (status != nfs_ok)
+				return status;
+			break;
+		default:
+			return nfserr_resource;
+	}
+dprintk("encode_ace ret nfs_ok\n");
+	return nfs_ok;
+}
+
+static __be32 encode_stream_posixacl(struct xdr_stream *xdr,
+				struct posix_acl *acl,
+				struct svc_rqst *rqstp)
+{
+	__be32 status;
+	int cnt;
+
+	if (acl == NULL) {
+dprintk("in encode_posixacl NULL acl\n");
+		if (xdr_stream_encode_u32(xdr, 0) != XDR_UNIT)
+			return nfserr_resource;
+		return nfs_ok;
+	}
+	if (acl->a_count > NFS_ACL_MAX_ENTRIES)
+		return nfserr_resource;
+	if (xdr_stream_encode_u32(xdr, acl->a_count) != XDR_UNIT)
+		return nfserr_resource;
+
+	for (cnt = 0; cnt < acl->a_count; cnt++) {
+		status = xdr_nfs4ace_stream_encode(xdr, rqstp,
+						&acl->a_entries[cnt]);
+dprintk("aft xdr_nfs4ace_encode=%d\n", status);
+		if (status != nfs_ok)
+			return status;
+	}
+
+	return nfs_ok;
+}
+
+static __be32 nfsd4_encode_fattr4_posix_default_acl(struct xdr_stream *xdr,
+				      const struct nfsd4_fattr_args *args)
+{
+
+	return encode_stream_posixacl(xdr, args->dpacl, args->rqstp);
+}
+
+static __be32 nfsd4_encode_fattr4_posix_access_acl(struct xdr_stream *xdr,
+				      const struct nfsd4_fattr_args *args)
+{
+
+	return encode_stream_posixacl(xdr, args->pacl, args->rqstp);
+}
+
 static const nfsd4_enc_attr nfsd4_enc_fattr4_encode_ops[] = {
 	[FATTR4_SUPPORTED_ATTRS]	= nfsd4_encode_fattr4_supported_attrs,
 	[FATTR4_TYPE]			= nfsd4_encode_fattr4_type,
@@ -3558,6 +3823,10 @@ static const nfsd4_enc_attr nfsd4_enc_fattr4_encode_ops[] = {
 	[FATTR4_MODE_UMASK]		= nfsd4_encode_fattr4__noop,
 	[FATTR4_XATTR_SUPPORT]		= nfsd4_encode_fattr4_xattr_support,
 	[FATTR4_OPEN_ARGUMENTS]		= nfsd4_encode_fattr4_open_arguments,
+	[FATTR4_ACL_TRUEFORM]		= nfsd4_encode_fattr4_acl_trueform,
+	[FATTR4_ACL_TRUEFORM_SCOPE]	= nfsd4_encode_fattr4_acl_trueform_scope,
+	[FATTR4_POSIX_DEFAULT_ACL]	= nfsd4_encode_fattr4_posix_default_acl,
+	[FATTR4_POSIX_ACCESS_ACL]	= nfsd4_encode_fattr4_posix_access_acl,
 };
 
 /*
@@ -3595,6 +3864,8 @@ nfsd4_encode_fattr4(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 	args.dentry = dentry;
 	args.ignore_crossmnt = (ignore_crossmnt != 0);
 	args.acl = NULL;
+	args.pacl = NULL;
+	args.dpacl = NULL;
 #ifdef CONFIG_NFSD_V4_SECURITY_LABEL
 	args.context.context = NULL;
 #endif
@@ -3684,6 +3955,20 @@ nfsd4_encode_fattr4(struct svc_rqst *rqstp, struct xdr_stream *xdr,
 			goto out_nfserr;
 	}
 
+	if (attrmask[2] & (FATTR4_WORD2_POSIX_DEFAULT_ACL |
+					FATTR4_WORD2_POSIX_ACCESS_ACL)) {
+		err = nfsd4_get_posix_acl(rqstp, dentry, &args.pacl,
+					&args.dpacl);
+		if (err == -EOPNOTSUPP)
+			attrmask[2] &= ~(FATTR4_WORD2_POSIX_DEFAULT_ACL |
+						FATTR4_WORD2_POSIX_ACCESS_ACL);
+		else if (err == -EINVAL) {
+			status = nfserr_attrnotsupp;
+			goto out;
+		} else if (err != 0)
+			goto out_nfserr;
+	}
+
 	args.contextsupport = false;
 
 #ifdef CONFIG_NFSD_V4_SECURITY_LABEL
@@ -3732,6 +4017,10 @@ out:
 		security_release_secctx(&args.context);
 #endif /* CONFIG_NFSD_V4_SECURITY_LABEL */
 	kfree(args.acl);
+	if (args.pacl)
+		posix_acl_release(args.pacl);
+	if (args.dpacl)
+		posix_acl_release(args.dpacl);
 	if (tempfh) {
 		fh_put(tempfh);
 		kfree(tempfh);
