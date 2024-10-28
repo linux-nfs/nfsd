@@ -515,8 +515,9 @@ enum {
 };
 
 /*
- * Symbol names and values are from draft-rmacklem-nfsv4-posix-acls Sec. X.
- * "POSIX Draft ACL support for NFSv4.2"
+ * Symbol names and values are from draft-rmacklem-nfsv4-posix-acls
+ * "POSIX Draft ACL support for Network File System Version 4, Minor version 2"
+ * Section 4.
  */
 enum {
 	ACL_MODEL_NFS4			= 1,
