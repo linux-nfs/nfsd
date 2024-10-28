@@ -3608,8 +3608,12 @@ static __be32 nfsd4_encode_fattr4_open_arguments(struct xdr_stream *xdr,
 static __be32 nfsd4_encode_fattr4_acl_trueform(struct xdr_stream *xdr,
 					const struct nfsd4_fattr_args *args)
 {
+	u32 trueform;
 
-	return nfsd4_encode_uint32_t(xdr, ACL_MODEL_POSIX_DRAFT);
+	trueform = ACL_MODEL_NONE;
+	if (IS_POSIXACL(d_inode(args->dentry)))
+		trueform = ACL_MODEL_POSIX_DRAFT;
+	return nfsd4_encode_uint32_t(xdr, trueform);
 }
 
 static __be32 nfsd4_encode_fattr4_acl_trueform_scope(struct xdr_stream *xdr,
