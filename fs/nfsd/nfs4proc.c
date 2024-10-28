@@ -1179,7 +1179,7 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 				&cstate->current_fh, &setattr->sa_stateid,
 				flags, NULL, &st);
 		if (status)
-			return status;
+			goto out_err;
 	}
 
 	if (deleg_attrs) {
@@ -1198,14 +1198,21 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 		return status;
 
 	err = fh_want_write(&cstate->current_fh);
-	if (err)
-		return nfserrno(err);
+	if (err) {
+		status = nfserrno(err);
+		goto out_err;
+	}
 	status = nfs_ok;
 
 	status = check_attr_support(rqstp, cstate, setattr->sa_bmval,
 				    nfsd_attrmask);
 	if (status)
 		goto out;
+
+	if (setattr->sa_acl && (setattr->sa_dpacl || setattr->sa_pacl)) {
+		status = nfserr_inval;
+		goto out;
+	}
 
 	inode = cstate->current_fh.fh_dentry->d_inode;
 	status = nfsd4_acl_to_attr(S_ISDIR(inode->i_mode) ? NF4DIR : NF4REG,
@@ -1225,12 +1232,13 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	if (!status)
 		status = nfserrno(attrs.na_aclerr);
 out:
-	if (setattr->sa_dpacl != NULL)
-		posix_acl_release(setattr->sa_dpacl);
-	if (setattr->sa_pacl != NULL)
-		posix_acl_release(setattr->sa_pacl);
 	nfsd_attrs_free(&attrs);
 	fh_drop_write(&cstate->current_fh);
+out_err:
+	if (setattr->sa_dpacl)
+		posix_acl_release(setattr->sa_dpacl);
+	if (setattr->sa_pacl)
+		posix_acl_release(setattr->sa_pacl);
 	return status;
 }
 
