@@ -1126,6 +1126,31 @@ nfsd4_secinfo_no_name_release(union nfsd4_op_u *u)
 		exp_put(u->secinfo_no_name.sin_exp);
 }
 
+/*
+ * Set the Access and/or Default ACL of a file.
+ */
+static __be32
+nfsd4_proc_setacl(struct svc_rqst *rqstp, svc_fh *fh, struct inode *inode,
+		struct posix_acl *dpacl, struct posix_acl *pacl)
+{
+	int error = 0;
+
+	if (dpacl == NULL && pacl == NULL)
+		return nfs_ok;
+
+	inode_lock(inode);
+
+	if (dpacl != NULL)
+		error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
+				      ACL_TYPE_DEFAULT, dpacl);
+	if (!error && pacl != NULL)
+		error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
+				      ACL_TYPE_ACCESS, pacl);
+
+	inode_unlock(inode);
+	return nfserrno(error);
+}
+
 static __be32
 nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	      union nfsd4_op_u *u)
@@ -1192,11 +1217,18 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	cstate->current_fh.fh_no_wcc = true;
 	status = nfsd_setattr(rqstp, &cstate->current_fh, &attrs, NULL);
 	cstate->current_fh.fh_no_wcc = save_no_wcc;
+	if (!status && (setattr->sa_dpacl != NULL || setattr->sa_pacl != NULL))
+		status = nfsd4_proc_setacl(rqstp, &cstate->current_fh, inode,
+					setattr->sa_dpacl, setattr->sa_pacl);
 	if (!status)
 		status = nfserrno(attrs.na_labelerr);
 	if (!status)
 		status = nfserrno(attrs.na_aclerr);
 out:
+	if (setattr->sa_dpacl != NULL)
+		posix_acl_release(setattr->sa_dpacl);
+	if (setattr->sa_pacl != NULL)
+		posix_acl_release(setattr->sa_pacl);
 	nfsd_attrs_free(&attrs);
 	fh_drop_write(&cstate->current_fh);
 	return status;
