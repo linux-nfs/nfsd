@@ -418,6 +418,7 @@ nfsd4_decode_posixace4(struct nfsd4_compoundargs *argp,
 	__be32 *p, status;
 
 	status = nfsacl4_posix_xdrtotag(argp->xdr, &val);
+dprintk("decode_posixace val=%d stat=%d\n", val, status);
 	if (status != nfs_ok)
 		return status;
 	ace->e_tag = val;
@@ -436,12 +437,18 @@ dprintk("val=%d scratchlen=%d scratchbuf=%p\n", val, argp->xdr->scratch.iov_len,
 		return nfserr_bad_xdr;
 	switch(ace->e_tag) {
 	case ACL_USER:
-		status = nfsd_map_name_to_uid(argp->rqstp,
-				(char *)p, val, &ace->e_uid);
+		if (val > 0)
+			status = nfsd_map_name_to_uid(argp->rqstp,
+					(char *)p, val, &ace->e_uid);
+		else
+			status = nfserr_bad_xdr;
 		break;
 	case ACL_GROUP:
-		status = nfsd_map_name_to_gid(argp->rqstp,
-				(char *)p, val, &ace->e_gid);
+		if (val > 0)
+			status = nfsd_map_name_to_gid(argp->rqstp,
+					(char *)p, val, &ace->e_gid);
+		else
+			status = nfserr_bad_xdr;
 	}
 
 	return status;
@@ -454,16 +461,18 @@ nfsd4_decode_posix_acl(struct nfsd4_compoundargs *argp, struct posix_acl **acl)
 	__be32 status;
 	u32 count;
 
+dprintk("in nfsd4_decode_posix_acl\n");
 	if (xdr_stream_decode_u32(argp->xdr, &count) < 0)
 		return nfserr_bad_xdr;
+dprintk("count=%d rem=%d\n", count, xdr_stream_remaining(argp->xdr));
 
-	if (count > xdr_stream_remaining(argp->xdr) / 16)
+	if (count > xdr_stream_remaining(argp->xdr) / 12)
 		/*
-		 * Even with 4-byte names there wouldn't be
+		 * Even with 0-byte names there wouldn't be
 		 * space for that many aces; something fishy is
 		 * going on:
 		 */
-		return nfserr_fbig;
+		return nfserr_bad_xdr;
 
 	*acl = posix_acl_alloc(count, GFP_NOFS);
 	if (*acl == NULL)
@@ -472,6 +481,7 @@ nfsd4_decode_posix_acl(struct nfsd4_compoundargs *argp, struct posix_acl **acl)
 	(*acl)->a_count = count;
 	for (ace = (*acl)->a_entries; ace < (*acl)->a_entries + count; ace++) {
 		status = nfsd4_decode_posixace4(argp, ace);
+dprintk("decode_posixace4=%d\n", status);
 		if (status) {
 			posix_acl_release(*acl);
 			*acl = NULL;
