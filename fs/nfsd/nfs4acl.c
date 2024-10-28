@@ -176,6 +176,39 @@ rel_pacl:
 	return error;
 }
 
+int
+nfsd4_get_posix_acl(struct svc_rqst *rqstp, struct dentry *dentry,
+		struct posix_acl **pacl_ret, struct posix_acl **dpacl_ret)
+{
+	struct inode *inode = d_inode(dentry);
+	int error = 0;
+	struct posix_acl *pacl = NULL, *dpacl = NULL;
+
+	*pacl_ret = NULL;
+	*dpacl_ret = NULL;
+	pacl = get_inode_acl(inode, ACL_TYPE_ACCESS);
+	if (!pacl)
+		pacl = posix_acl_from_mode(inode->i_mode, GFP_KERNEL);
+
+	if (IS_ERR(pacl))
+		return PTR_ERR(pacl);
+
+	*pacl_ret = pacl;
+
+	if (S_ISDIR(inode->i_mode)) {
+		dpacl = get_inode_acl(inode, ACL_TYPE_DEFAULT);
+		if (IS_ERR(dpacl)) {
+			error = PTR_ERR(dpacl);
+			goto out;
+		}
+
+		*dpacl_ret = dpacl;
+	}
+
+out:
+	return error;
+}
+
 struct posix_acl_summary {
 	unsigned short owner;
 	unsigned short users;
