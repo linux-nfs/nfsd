@@ -430,6 +430,7 @@ dprintk("perm=%d\n", val);
 
 	if (xdr_stream_decode_u32(argp->xdr, &val) < 0)
 		return nfserr_bad_xdr;
+dprintk("val=%d scratchlen=%d scratchbuf=%p\n", val, argp->xdr->scratch.iov_len,  argp->xdr->scratch.iov_base);
 	p = xdr_inline_decode(argp->xdr, val);
 	if (!p)
 		return nfserr_bad_xdr;
@@ -993,7 +994,7 @@ nfsd4_decode_create(struct nfsd4_compoundargs *argp, union nfsd4_op_u *u)
 				    ARRAY_SIZE(create->cr_bmval),
 				    &create->cr_iattr, &create->cr_acl,
 				    &create->cr_label, &create->cr_umask,
-				    NULL, NULL);
+				    &create->cr_dpacl, &create->cr_pacl);
 	if (status)
 		return status;
 
@@ -1145,7 +1146,7 @@ nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open
 					     ARRAY_SIZE(open->op_bmval),
 					     &open->op_iattr, &open->op_acl,
 					     &open->op_label, &open->op_umask,
-					     NULL, NULL);
+					     &open->op_dpacl, &open->op_pacl);
 		if (status)
 			return status;
 		break;
@@ -1164,7 +1165,7 @@ nfsd4_decode_createhow4(struct nfsd4_compoundargs *argp, struct nfsd4_open *open
 					     ARRAY_SIZE(open->op_bmval),
 					     &open->op_iattr, &open->op_acl,
 					     &open->op_label, &open->op_umask,
-					     NULL, NULL);
+					     &open->op_dpacl, &open->op_pacl);
 		if (status)
 			return status;
 		break;
