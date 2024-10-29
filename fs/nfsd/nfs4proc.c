@@ -276,6 +276,7 @@ nfsd4_create_file(struct svc_rqst *rqstp, struct svc_fh *fhp,
 		attrs.na_pacl = open->op_pacl;
 		open->op_dpacl = NULL;
 		open->op_pacl = NULL;
+dprintk("in open pacl=%p dpacl=%p\n", attrs.na_pacl, attrs.na_dpacl);
 	}
 
 	inode_lock_nested(inode, I_MUTEX_PARENT);
@@ -384,7 +385,9 @@ nfsd4_create_file(struct svc_rqst *rqstp, struct svc_fh *fhp,
 	}
 
 set_attr:
+dprintk("at nfsd_create_setattr\n");
 	status = nfsd_create_setattr(rqstp, fhp, resfhp, &attrs);
+dprintk("aft nfsd_create_setattr=%d paclerr=%d\n", status, attrs.na_paclerr);
 
 	if (attrs.na_labelerr)
 		open->op_bmval[2] &= ~FATTR4_WORD2_SECURITY_LABEL;
@@ -465,7 +468,9 @@ do_open_lookup(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate, stru
 		 */
 
 		current->fs->umask = open->op_umask;
+dprintk("openacl=%p\n", open->op_pacl);
 		status = nfsd4_create_file(rqstp, current_fh, *resfh, open);
+dprintk("aft create_file=%d\n", status);
 		current->fs->umask = 0;
 
 		/*
@@ -561,6 +566,7 @@ nfsd4_open(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	open->op_filp = NULL;
 	open->op_rqstp = rqstp;
 
+dprintk("nfsd4_open pacl=%p\n", open->op_pacl);
 	/* This check required by spec. */
 	if (open->op_create && open->op_claim_type != NFS4_OPEN_CLAIM_NULL) {
 		status = nfserr_inval;
@@ -604,6 +610,7 @@ nfsd4_open(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	}
 
 	status = nfsd4_check_open_attributes(rqstp, cstate, open);
+dprintk("check_open_attrs=%d\n", status);
 	if (status)
 		goto out;
 
@@ -620,6 +627,7 @@ nfsd4_open(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	case NFS4_OPEN_CLAIM_DELEGATE_CUR:
 	case NFS4_OPEN_CLAIM_NULL:
 		status = do_open_lookup(rqstp, cstate, open, &resfh);
+dprintk("aft do_open_lookup=%d\n", status);
 		if (status)
 			goto out;
 		break;
@@ -1179,14 +1187,35 @@ nfsd4_proc_setacl(struct svc_rqst *rqstp, svc_fh *fh, struct inode *inode,
 
 	inode_lock(inode);
 
-	if (dpacl != NULL)
-		error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
-				      ACL_TYPE_DEFAULT, dpacl);
-	if (!error && pacl != NULL)
-		error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
-				      ACL_TYPE_ACCESS, pacl);
+	if (dpacl != NULL) {
+dprintk("proc_setacl dpacl cnt=%d\n", dpacl->a_count);
+		/* a_count == 0 means delete the ACL. */
+		if (dpacl->a_count > 0)
+			error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
+					      ACL_TYPE_DEFAULT, dpacl);
+		else
+			error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
+					      ACL_TYPE_DEFAULT, NULL);
+	}
+	if (!error && pacl != NULL) {
+dprintk("proc_setacl pacl cnt=%d\n", pacl->a_count);
+		/*
+		 * For any file system that is not ACL_SCOPE_FILE_OBJECT,
+		 * a_count == 0 MUST reply nfserr_inval.
+		 * For a file system that is ACL_SCOPE_FILE_OBJECT,
+		 * a_count == 0 means delete the ACL.
+		 * XXX File systems that are ACL_SCOPE_FILE_OBJECT
+		 * are not yet supported.
+		 */
+		if (pacl->a_count > 0)
+			error = set_posix_acl(&nop_mnt_idmap, fh->fh_dentry,
+					      ACL_TYPE_ACCESS, pacl);
+		else
+			error = -EINVAL;
+	}
 
 	inode_unlock(inode);
+dprintk("eo proc_setacl=%d\n", error);
 	return nfserrno(error);
 }
 
@@ -1208,6 +1237,7 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	deleg_attrs = setattr->sa_bmval[2] & (FATTR4_WORD2_TIME_DELEG_ACCESS |
 					      FATTR4_WORD2_TIME_DELEG_MODIFY);
 
+dprintk("nfsd4_setattr iattr=0x%x\n", setattr->sa_iattr.ia_valid);
 	if (deleg_attrs || (setattr->sa_iattr.ia_valid & ATTR_SIZE)) {
 		int flags = WR_STATE;
 
@@ -1217,6 +1247,7 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 		status = nfs4_preprocess_stateid_op(rqstp, cstate,
 				&cstate->current_fh, &setattr->sa_stateid,
 				flags, NULL, &st);
+dprintk("preproc=%d\n", status);
 		if (status)
 			goto out_err;
 	}
@@ -1239,37 +1270,44 @@ nfsd4_setattr(struct svc_rqst *rqstp, struct nfsd4_compound_state *cstate,
 	err = fh_want_write(&cstate->current_fh);
 	if (err) {
 		status = nfserrno(err);
+dprintk("want_write=%d\n", status);
 		goto out_err;
 	}
 	status = nfs_ok;
 
 	status = check_attr_support(rqstp, cstate, setattr->sa_bmval,
 				    nfsd_attrmask);
+dprintk("checkattr=%d\n", status);
 	if (status)
 		goto out;
 
 	if (setattr->sa_acl && (setattr->sa_dpacl || setattr->sa_pacl)) {
 		status = nfserr_inval;
+dprintk("err_inval\n");
 		goto out;
 	}
 
 	inode = cstate->current_fh.fh_dentry->d_inode;
 	status = nfsd4_acl_to_attr(S_ISDIR(inode->i_mode) ? NF4DIR : NF4REG,
 				   setattr->sa_acl, &attrs);
+dprintk("acltoattr=%d\n", status);
 
 	if (status)
 		goto out;
 	save_no_wcc = cstate->current_fh.fh_no_wcc;
 	cstate->current_fh.fh_no_wcc = true;
 	status = nfsd_setattr(rqstp, &cstate->current_fh, &attrs, NULL);
+dprintk("nfsd_setattr=%d\n", status);
 	cstate->current_fh.fh_no_wcc = save_no_wcc;
 	if (!status && (setattr->sa_dpacl != NULL || setattr->sa_pacl != NULL))
 		status = nfsd4_proc_setacl(rqstp, &cstate->current_fh, inode,
 					setattr->sa_dpacl, setattr->sa_pacl);
+dprintk("proc_setacl=%d\n", status);
 	if (!status)
 		status = nfserrno(attrs.na_labelerr);
 	if (!status)
 		status = nfserrno(attrs.na_aclerr);
+dprintk("afterr=%d\n", status);
 out:
 	nfsd_attrs_free(&attrs);
 	fh_drop_write(&cstate->current_fh);
