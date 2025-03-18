@@ -431,7 +431,7 @@ dprintk("perm=%d\n", val);
 
 	if (xdr_stream_decode_u32(argp->xdr, &val) < 0)
 		return nfserr_bad_xdr;
-dprintk("val=%d scratchlen=%d scratchbuf=%p\n", val, argp->xdr->scratch.iov_len,  argp->xdr->scratch.iov_base);
+dprintk("val=%d scratchlen=%zu scratchbuf=%p\n", val, argp->xdr->scratch.iov_len,  argp->xdr->scratch.iov_base);
 	p = xdr_inline_decode(argp->xdr, val);
 	if (!p)
 		return nfserr_bad_xdr;
@@ -464,7 +464,7 @@ nfsd4_decode_posix_acl(struct nfsd4_compoundargs *argp, struct posix_acl **acl)
 dprintk("in nfsd4_decode_posix_acl\n");
 	if (xdr_stream_decode_u32(argp->xdr, &count) < 0)
 		return nfserr_bad_xdr;
-dprintk("count=%d rem=%d\n", count, xdr_stream_remaining(argp->xdr));
+dprintk("count=%d rem=%zu\n", count, xdr_stream_remaining(argp->xdr));
 
 	if (count > xdr_stream_remaining(argp->xdr) / 12)
 		/*
