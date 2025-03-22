@@ -2575,6 +2575,13 @@ nfsd_permission(struct svc_cred *cred, struct svc_export *exp,
 		return nfserr_perm;
 
 	/*
+	 * For the purpose of permission checking of NLM requests,
+	 * the locker must have READ access or own the file
+	 */
+	if (acc & NFSD_MAY_NLM)
+		acc = NFSD_MAY_READ | NFSD_MAY_OWNER_OVERRIDE;
+
+	/*
 	 * The file owner always gets access permission for accesses that
 	 * would normally be checked at open time. This is to make
 	 * file access work even when the client has done a fchmod(fd, 0).
