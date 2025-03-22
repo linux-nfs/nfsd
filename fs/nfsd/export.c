@@ -1143,15 +1143,6 @@ ok:
 			return nfs_ok;
 	}
 
-	/* If the compound op contains a spo_must_allowed op,
-	 * it will be sent with integrity/protection which
-	 * will have to be expressly allowed on mounts that
-	 * don't support it
-	 */
-
-	if (nfsd4_spo_must_allow(rqstp))
-		return nfs_ok;
-
 	/* Some calls may be processed without authentication
 	 * on GSS exports. For example NFS2/3 calls on root
 	 * directory, see section 2.3.2 of rfc 2623.
@@ -1168,6 +1159,14 @@ ok:
 				return 0;
 		}
 	}
+	/* If the compound op contains a spo_must_allowed op,
+	 * it will be sent with integrity/protection which
+	 * will have to be expressly allowed on mounts that
+	 * don't support it
+	 */
+	if (nfsd4_spo_must_allow(rqstp))
+		return nfs_ok;
+
 
 denied:
 	return nfserr_wrongsec;
