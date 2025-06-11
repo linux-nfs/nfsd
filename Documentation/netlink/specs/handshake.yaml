@@ -87,6 +87,10 @@ attribute-sets:
         name: remote-auth
         type: u32
         multi-attr: true
+      -
+        name: tag
+        type: string
+        multi-attr: true
 
 operations:
   list:
@@ -123,6 +127,7 @@ operations:
             - status
             - sockfd
             - remote-auth
+            - tag
 
 mcast-groups:
   list:
