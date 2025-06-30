@@ -79,6 +79,7 @@ static void handshake_req_destroy(struct handshake_req *req)
 		req->hr_proto->hp_destroy(req);
 	rhashtable_remove_fast(&handshake_rhashtbl, &req->hr_rhash,
 			       handshake_rhash_params);
+	tagset_destroy(&req->hr_tags);
 	kfree(req);
 }
 
@@ -124,6 +125,7 @@ struct handshake_req *handshake_req_alloc(const struct handshake_proto *proto,
 		return NULL;
 
 	INIT_LIST_HEAD(&req->hr_list);
+	tagset_init(&req->hr_tags);
 	req->hr_proto = proto;
 	return req;
 }

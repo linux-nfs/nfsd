@@ -134,6 +134,24 @@ out_status:
 	return err;
 }
 
+static void handshake_get_sessiontags(struct handshake_req *req,
+				      struct genl_info *info)
+{
+	struct nlattr *head = nlmsg_attrdata(info->nlhdr, GENL_HDRLEN);
+	int rem, len = nlmsg_attrlen(info->nlhdr, GENL_HDRLEN);
+	struct nlattr *nla;
+
+	nla_for_each_attr(nla, head, len, rem) {
+		char *tag;
+
+		if (nla_type(nla) != HANDSHAKE_A_DONE_TAG)
+			continue;
+
+		tag = nla_strdup(nla, GFP_KERNEL);
+		tagset_add(&req->hr_tags, tag, GFP_KERNEL);
+	}
+}
+
 int handshake_nl_done_doit(struct sk_buff *skb, struct genl_info *info)
 {
 	struct net *net = sock_net(skb->sk);
@@ -162,6 +180,7 @@ int handshake_nl_done_doit(struct sk_buff *skb, struct genl_info *info)
 	status = -EIO;
 	if (info->attrs[HANDSHAKE_A_DONE_STATUS])
 		status = nla_get_u32(info->attrs[HANDSHAKE_A_DONE_STATUS]);
+	handshake_get_sessiontags(req, info);
 
 	handshake_complete(req, status, info);
 	sockfd_put(sock);
