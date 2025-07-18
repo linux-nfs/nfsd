@@ -360,6 +360,8 @@ static void svc_export_release(struct rcu_head *rcu_head)
 	struct svc_export *exp = container_of(rcu_head, struct svc_export,
 			ex_rcu);
 
+	tagset_destroy(&exp->ex_deny_tags);
+	tagset_destroy(&exp->ex_allow_tags);
 	nfsd4_fslocs_free(&exp->ex_fslocs);
 	export_stats_destroy(exp->ex_stats);
 	kfree(exp->ex_stats);
@@ -585,6 +587,29 @@ static int xprtsec_parse(char **mesg, char *buf, struct svc_export *exp)
 	return 0;
 }
 
+static int tags_parse(char **mesg, char *buf, struct tagset *tags)
+{
+	unsigned int i, listsize;
+	int err;
+
+	err = get_uint(mesg, &listsize);
+	if (err)
+		return -EINVAL;
+
+	for (i = 0; i < listsize; i++) {
+		int len;
+
+		len = qword_get(mesg, buf, PAGE_SIZE);
+		if (len > 64)	/* 64 is arbitrary */
+			return -EINVAL;
+		trace_printk("tag=%s\n", buf);
+		if (!tagset_add_dup(tags, buf, GFP_KERNEL))
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
 static inline int
 nfsd_uuid_parse(char **mesg, char *buf, unsigned char **puuid)
 {
@@ -642,10 +667,14 @@ static int svc_export_parse(struct cache_detail *cd, char *mesg, int mlen)
 	if (err)
 		goto out1;
 
+	trace_printk("exp=%p\n", &exp);
+
 	exp.ex_client = dom;
 	exp.cd = cd;
 	exp.ex_devid_map = NULL;
 	exp.ex_xprtsec_modes = NFSEXP_XPRTSEC_ALL;
+	tagset_init(&exp.ex_allow_tags);
+	tagset_init(&exp.ex_deny_tags);
 
 	/* expiry */
 	err = get_expiry(&mesg, &exp.h.expiry_time);
@@ -681,6 +710,7 @@ static int svc_export_parse(struct cache_detail *cd, char *mesg, int mlen)
 		exp.ex_fsid = an_int;
 
 		while (qword_get(&mesg, buf, PAGE_SIZE) > 0) {
+			trace_printk("option=%s\n", buf);
 			if (strcmp(buf, "fsloc") == 0)
 				err = fsloc_parse(&mesg, buf, &exp.ex_fslocs);
 			else if (strcmp(buf, "uuid") == 0)
@@ -689,6 +719,10 @@ static int svc_export_parse(struct cache_detail *cd, char *mesg, int mlen)
 				err = secinfo_parse(&mesg, buf, &exp);
 			else if (strcmp(buf, "xprtsec") == 0)
 				err = xprtsec_parse(&mesg, buf, &exp);
+			else if (strcmp(buf, "allow_tags") == 0)
+				err = tags_parse(&mesg, buf, &exp.ex_allow_tags);
+			else if (strcmp(buf, "deny_tags") == 0)
+				err = tags_parse(&mesg, buf, &exp.ex_deny_tags);
 			else
 				/* quietly ignore unknown words and anything
 				 * following. Newer user-space can try to set
@@ -847,6 +881,8 @@ static void export_update(struct cache_head *cnew, struct cache_head *citem)
 	struct svc_export *item = container_of(citem, struct svc_export, h);
 	int i;
 
+	trace_printk("dest=%p src=%p\n", new, item);
+
 	new->ex_flags = item->ex_flags;
 	new->ex_anon_uid = item->ex_anon_uid;
 	new->ex_anon_gid = item->ex_anon_gid;
@@ -867,6 +903,8 @@ static void export_update(struct cache_head *cnew, struct cache_head *citem)
 		new->ex_flavors[i] = item->ex_flavors[i];
 	}
 	new->ex_xprtsec_modes = item->ex_xprtsec_modes;
+	tagset_copy(&new->ex_allow_tags, &item->ex_allow_tags, GFP_KERNEL);
+	tagset_copy(&new->ex_deny_tags, &item->ex_deny_tags, GFP_KERNEL);
 }
 
 static struct cache_head *svc_export_alloc(void)
@@ -886,6 +924,9 @@ static struct cache_head *svc_export_alloc(void)
 		kfree(i);
 		return NULL;
 	}
+
+	tagset_init(&i->ex_allow_tags);
+	tagset_init(&i->ex_deny_tags);
 
 	return &i->h;
 }
@@ -935,6 +976,8 @@ svc_export_update(struct svc_export *new, struct svc_export *old)
 	struct cache_head *ch;
 	int hash = svc_export_hash(old);
 
+	trace_printk("new=%p old=%p\n", new, old);
+
 	ch = sunrpc_cache_update(old->cd, &new->h, &old->h, hash);
 	if (ch)
 		return container_of(ch, struct svc_export, h);
@@ -949,7 +992,7 @@ exp_find_key(struct cache_detail *cd, struct auth_domain *clp, int fsid_type,
 {
 	struct svc_expkey key, *ek;
 	int err;
-	
+
 	if (!clp)
 		return ERR_PTR(-ENOENT);
 
@@ -1110,19 +1153,62 @@ __be32 check_nfsd_access(struct svc_export *exp, struct svc_rqst *rqstp,
 
 	xprt = rqstp->rq_xprt;
 
+	trace_printk("exp=%p\n", exp);
+	trace_printk("xprtsec=none\n");
 	if (exp->ex_xprtsec_modes & NFSEXP_XPRTSEC_NONE) {
-		if (!test_bit(XPT_TLS_SESSION, &xprt->xpt_flags))
+		if (!test_bit(XPT_TLS_SESSION, &xprt->xpt_flags)) {
+			trace_printk("xprtsec=none ok\n");
 			goto ok;
+		}
 	}
+	trace_printk("xprtsec=tls\n");
 	if (exp->ex_xprtsec_modes & NFSEXP_XPRTSEC_TLS) {
 		if (test_bit(XPT_TLS_SESSION, &xprt->xpt_flags) &&
-		    !test_bit(XPT_PEER_AUTH, &xprt->xpt_flags))
+		    !test_bit(XPT_PEER_AUTH, &xprt->xpt_flags)) {
+			trace_printk("xprtsec=tls ok\n");
 			goto ok;
+		}
 	}
+	trace_printk("xprtsec=mtls\n");
 	if (exp->ex_xprtsec_modes & NFSEXP_XPRTSEC_MTLS) {
+		unsigned long index;
+		char *tag;
+
 		if (test_bit(XPT_TLS_SESSION, &xprt->xpt_flags) &&
-		    test_bit(XPT_PEER_AUTH, &xprt->xpt_flags))
-			goto ok;
+		    test_bit(XPT_PEER_AUTH, &xprt->xpt_flags)) {
+			struct tagset *set;
+
+			/* Show the transport's handshake tags */
+			set = &xprt->xpt_handshake_tags;
+			tagset_for_each(set, index, tag)
+				trace_printk("xprt tag[%lu]: %s\n", index, tag);
+
+			/* Show the export's allow tags */
+			set = &exp->ex_allow_tags;
+			tagset_for_each(set, index, tag)
+				trace_printk("allow tag[%lu]: %s\n", index, tag);
+
+			/* Show the export's deny tags */
+			set = &exp->ex_deny_tags;
+			tagset_for_each(set, index, tag)
+				trace_printk("deny tag[%lu]: %s\n", index, tag);
+
+			if (tagset_is_empty(&exp->ex_allow_tags) &&
+			    tagset_is_empty(&exp->ex_deny_tags)) {
+				trace_printk("xprtsec=mtls ok\n");
+				goto ok;
+			}
+			if (tagset_intersection(&xprt->xpt_handshake_tags,
+						 &exp->ex_deny_tags)) {
+				trace_printk("xprtsec=mtls denied\n");
+				goto denied;
+			}
+			if (tagset_intersection(&xprt->xpt_handshake_tags,
+						 &exp->ex_allow_tags)) {
+				trace_printk("xprtsec=mtls allowed\n");
+				goto ok;
+			}
+		}
 	}
 	if (!may_bypass_gss)
 		goto denied;
@@ -1165,11 +1251,12 @@ ok:
 	     rqstp->rq_cred.cr_flavor == RPC_AUTH_UNIX)) {
 		for (f = exp->ex_flavors; f < end; f++) {
 			if (f->pseudoflavor >= RPC_AUTH_DES)
-				return 0;
+				return nfs_ok;
 		}
 	}
 
 denied:
+	trace_printk("xid=0x%08x denied\n", be32_to_cpu(rqstp->rq_xid));
 	return nfserr_wrongsec;
 }
 

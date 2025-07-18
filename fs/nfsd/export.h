@@ -7,6 +7,7 @@
 
 #include <linux/sunrpc/cache.h>
 #include <linux/percpu_counter.h>
+#include <linux/tagset.h>
 #include <uapi/linux/nfsd/export.h>
 #include <linux/nfs4.h>
 
@@ -78,6 +79,7 @@ struct svc_export {
 	struct rcu_head		ex_rcu;
 	unsigned long		ex_xprtsec_modes;
 	struct export_stats	*ex_stats;
+	struct tagset		ex_allow_tags, ex_deny_tags;
 };
 
 /* an "export key" (expkey) maps a filehandlefragement to an
