@@ -434,6 +434,7 @@ static void svc_tcp_handshake_done(void *data, int status, key_serial_t peerid,
 		if (peerid != TLS_NO_PEERID)
 			set_bit(XPT_PEER_AUTH, &xprt->xpt_flags);
 		set_bit(XPT_TLS_SESSION, &xprt->xpt_flags);
+		tagset_copy(&xprt->xpt_handshake_tags, tags, GFP_KERNEL);
 	}
 	clear_bit(XPT_HANDSHAKE, &xprt->xpt_flags);
 	complete_all(&svsk->sk_handshake_done);
