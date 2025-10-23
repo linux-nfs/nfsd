@@ -12,8 +12,8 @@ nfsd-y			+= trace.o
 
 nfsd-y 			+= nfssvc.o nfsctl.o nfsfh.o vfs.o \
 			   export.o auth.o lockd.o nfscache.o \
-			   stats.o filecache.o nfs3proc.o nfs3xdr.o \
-			   netlink.o
+			   stats.o filecache.o netlink.o \
+			   nfs3proc.o nfs3xdr.o nfs3xdr_gen.o
 nfsd-$(CONFIG_NFSD_V2) += nfsproc.o nfsxdr.o
 nfsd-$(CONFIG_NFSD_V2_ACL) += nfs2acl.o
 nfsd-$(CONFIG_NFSD_V3_ACL) += nfs3acl.o
@@ -37,13 +37,20 @@ nfsd-$(CONFIG_DEBUG_FS) += debugfs.o
 #
 .PHONY: xdrgen
 
-xdrgen: ../../include/linux/sunrpc/xdrgen/nfs4_1.h nfs4xdr_gen.h nfs4xdr_gen.c
+xdrgen:	../../include/linux/sunrpc/xdrgen/nfs3.h nfs3xdr_gen.h nfs3xdr_gen.c \
+	../../include/linux/sunrpc/xdrgen/nfs4_1.h nfs4xdr_gen.h nfs4xdr_gen.c
 
+../../include/linux/sunrpc/xdrgen/nfs3.h: ../../Documentation/sunrpc/xdr/nfs3.x
+	../../tools/net/sunrpc/xdrgen/xdrgen definitions $< > $@
 ../../include/linux/sunrpc/xdrgen/nfs4_1.h: ../../Documentation/sunrpc/xdr/nfs4_1.x
 	../../tools/net/sunrpc/xdrgen/xdrgen definitions $< > $@
 
+nfs3xdr_gen.h: ../../Documentation/sunrpc/xdr/nfs3.x
+	../../tools/net/sunrpc/xdrgen/xdrgen declarations $< > $@
 nfs4xdr_gen.h: ../../Documentation/sunrpc/xdr/nfs4_1.x
 	../../tools/net/sunrpc/xdrgen/xdrgen declarations $< > $@
 
+nfs3xdr_gen.c: ../../Documentation/sunrpc/xdr/nfs3.x
+	../../tools/net/sunrpc/xdrgen/xdrgen source $< > $@
 nfs4xdr_gen.c: ../../Documentation/sunrpc/xdr/nfs4_1.x
 	../../tools/net/sunrpc/xdrgen/xdrgen source $< > $@
