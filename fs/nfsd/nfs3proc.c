@@ -86,6 +86,14 @@ nfsd3_mode_to_ftype3(umode_t mode)
 	return NF3REG;
 }
 
+static __always_inline void
+nfsd3_nfstime3_to_timespec64(struct timespec64 *dst,
+			     const struct nfstime3 *src)
+{
+	dst->tv_sec = src->seconds;
+	dst->tv_nsec = src->nseconds;
+}
+
 static void
 nfsd3_stat_to_fattr3(struct svc_rqst *rqstp, struct fattr3 *fattr,
 		     const struct kstat *stat, const struct svc_fh *fhp)
@@ -121,6 +129,77 @@ nfsd3_stat_to_fattr3(struct svc_rqst *rqstp, struct fattr3 *fattr,
 	nfsd3_timespec64_to_nfstime3(&fattr->atime, &stat->atime);
 	nfsd3_timespec64_to_nfstime3(&fattr->mtime, &stat->mtime);
 	nfsd3_timespec64_to_nfstime3(&fattr->ctime, &stat->ctime);
+}
+
+static void
+nfsd3_fill_wcc_data(struct svc_rqst *rqstp, struct wcc_data *wcc,
+		    const struct svc_fh *fhp)
+{
+	wcc->before.attributes_follow = fhp->fh_pre_saved;
+	if (fhp->fh_pre_saved) {
+		struct wcc_attr *wattr = &wcc->before.u.attributes;
+
+		wattr->size = fhp->fh_pre_size;
+		nfsd3_timespec64_to_nfstime3(&wattr->mtime, &fhp->fh_pre_mtime);
+		nfsd3_timespec64_to_nfstime3(&wattr->ctime, &fhp->fh_pre_ctime);
+	}
+
+	wcc->after.attributes_follow = fhp->fh_post_saved;
+	if (fhp->fh_post_saved)
+		nfsd3_stat_to_fattr3(rqstp, &wcc->after.u.attributes,
+				     &fhp->fh_post_attr, fhp);
+}
+
+static void
+nfsd3_sattr3_to_iattr(struct svc_rqst *rqstp, struct iattr *iap,
+		      const struct sattr3 *sattr)
+{
+	iap->ia_valid = 0;
+
+	if (sattr->mode.set_it) {
+		iap->ia_valid |= ATTR_MODE;
+		iap->ia_mode = sattr->mode.u.mode;
+	}
+	if (sattr->uid.set_it) {
+		iap->ia_uid = make_kuid(nfsd_user_namespace(rqstp),
+					sattr->uid.u.uid);
+		if (uid_valid(iap->ia_uid))
+			iap->ia_valid |= ATTR_UID;
+	}
+	if (sattr->gid.set_it) {
+		iap->ia_gid = make_kgid(nfsd_user_namespace(rqstp),
+					sattr->gid.u.gid);
+		if (gid_valid(iap->ia_gid))
+			iap->ia_valid |= ATTR_GID;
+	}
+	if (sattr->size.set_it) {
+		iap->ia_valid |= ATTR_SIZE;
+		iap->ia_size = sattr->size.u.size;
+	}
+	switch (sattr->atime.set_it) {
+	case DONT_CHANGE:
+		break;
+	case SET_TO_SERVER_TIME:
+		iap->ia_valid |= ATTR_ATIME;
+		break;
+	case SET_TO_CLIENT_TIME:
+		nfsd3_nfstime3_to_timespec64(&iap->ia_atime,
+					     &sattr->atime.u.atime);
+		iap->ia_valid |= ATTR_ATIME | ATTR_ATIME_SET;
+		break;
+	}
+	switch (sattr->mtime.set_it) {
+	case DONT_CHANGE:
+		break;
+	case SET_TO_SERVER_TIME:
+		iap->ia_valid |= ATTR_MTIME;
+		break;
+	case SET_TO_CLIENT_TIME:
+		nfsd3_nfstime3_to_timespec64(&iap->ia_mtime,
+					     &sattr->mtime.u.mtime);
+		iap->ia_valid |= ATTR_MTIME | ATTR_MTIME_SET;
+		break;
+	}
 }
 
 /*
@@ -176,27 +255,41 @@ out:
 	return rpc_success;
 }
 
-/*
- * Set a file's attributes
+/**
+ * nfsd3_proc_setattr - NFSv3 SETATTR - Set file attributes
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_setattr(struct svc_rqst *rqstp)
 {
-	struct nfsd3_sattrargs *argp = rqstp->rq_argp;
-	struct nfsd3_attrstat *resp = rqstp->rq_resp;
-	struct nfsd_attrs attrs = {
-		.na_iattr	= &argp->attrs,
-	};
+	struct nfsd3_setattrargs *argp = rqstp->rq_argp;
+	struct nfsd3_setattrres *resp = rqstp->rq_resp;
 	const struct timespec64 *guardtime = NULL;
+	struct svc_fh *fhp = &argp->fh;
+	struct nfsd_attrs nattrs = {
+		.na_iattr	= &argp->iattrs,
+	};
 
-	dprintk("nfsd: SETATTR(3)  %s\n",
-				SVCFH_fmt(&argp->fh));
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.object);
+	nfsd3_sattr3_to_iattr(rqstp, &argp->iattrs, &argp->xdrgen.new_attributes);
+	if (argp->xdrgen.guard.check) {
+		nfsd3_nfstime3_to_timespec64(&argp->guard,
+					     &argp->xdrgen.guard.u.obj_ctime);
+		guardtime = &argp->guard;
+	}
 
-	fh_copy(&resp->fh, &argp->fh);
-	if (argp->check_guard)
-		guardtime = &argp->guardtime;
-	resp->status = nfsd_setattr(rqstp, &resp->fh, &attrs, guardtime);
-	resp->status = nfsd3_map_status(resp->status);
+	resp->xdrgen.status = nfsd_setattr(rqstp, fhp, &nattrs, guardtime);
+
+	if (resp->xdrgen.status == nfs_ok) {
+		nfsd3_fill_wcc_data(rqstp, &resp->xdrgen.u.resok.obj_wcc, fhp);
+	} else {
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resp->xdrgen.u.resfail.obj_wcc, fhp);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -902,14 +995,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_SETATTR] = {
 		.pc_func = nfsd3_proc_setattr,
-		.pc_decode = nfs3svc_decode_sattrargs,
-		.pc_encode = nfs3svc_encode_wccstatres,
-		.pc_release = nfs3svc_release_fhandle,
-		.pc_argsize = sizeof(struct nfsd3_sattrargs),
-		.pc_argzero = sizeof(struct nfsd3_sattrargs),
-		.pc_ressize = sizeof(struct nfsd3_wccstatres),
+		.pc_decode = nfs_svc_decode_SETATTR3args,
+		.pc_encode = nfs_svc_encode_SETATTR3res,
+		.pc_argsize = sizeof(struct nfsd3_setattrargs),
+		.pc_argzero = 0,
+		.pc_ressize = sizeof(struct nfsd3_setattrres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+WC,
+		.pc_xdrressize = NFS3_SETATTR3res_sz,
 		.pc_name = "SETATTR",
 	},
 	[NFSPROC3_LOOKUP] = {

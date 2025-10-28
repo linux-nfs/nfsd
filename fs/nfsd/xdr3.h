@@ -17,12 +17,14 @@ struct nfsd3_getattrargs {
 
 static_assert(offsetof(struct nfsd3_getattrargs, xdrgen) == 0);
 
-struct nfsd3_sattrargs {
+struct nfsd3_setattrargs {
+	struct SETATTR3args	xdrgen;
+	struct timespec64	guard;
 	struct svc_fh		fh;
-	struct iattr		attrs;
-	int			check_guard;
-	struct timespec64	guardtime;
+	struct iattr		iattrs;
 };
+
+static_assert(offsetof(struct nfsd3_setattrargs, xdrgen) == 0);
 
 struct nfsd3_diropargs {
 	struct svc_fh		fh;
@@ -131,6 +133,12 @@ struct nfsd3_getattrres {
 };
 
 static_assert(offsetof(struct nfsd3_getattrres, xdrgen) == 0);
+
+struct nfsd3_setattrres {
+	struct SETATTR3res	xdrgen;
+};
+
+static_assert(offsetof(struct nfsd3_setattrres, xdrgen) == 0);
 
 /* LOOKUP, CREATE, MKDIR, SYMLINK, MKNOD */
 struct nfsd3_diropres  {
@@ -253,7 +261,7 @@ struct nfsd3_fhandle_pair {
  */
 union nfsd3_xdrstore {
 	struct nfsd3_getattrargs	getattrargs;
-	struct nfsd3_sattrargs		sattrargs;
+	struct nfsd3_setattrargs	setattrargs;
 	struct nfsd3_diropargs		diropargs;
 	struct nfsd3_readargs		readargs;
 	struct nfsd3_writeargs		writeargs;
@@ -264,6 +272,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_readdirargs	readdirargs;
 
 	struct nfsd3_getattrres		getattrres;
+	struct nfsd3_setattrres		setattrres;
 	struct nfsd3_diropres 		diropres;
 	struct nfsd3_accessres		accessres;
 	struct nfsd3_readlinkres	readlinkres;
@@ -282,7 +291,6 @@ union nfsd3_xdrstore {
 #define NFS3_SVC_XDRSIZE		sizeof(union nfsd3_xdrstore)
 
 bool nfs3svc_decode_fhandleargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_decode_sattrargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_diropargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_accessargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
