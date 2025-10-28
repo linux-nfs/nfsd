@@ -9,6 +9,7 @@
 #define _LINUX_NFSD_XDR3_H
 
 #include "xdr.h"
+#include "nfs3xdr_gen.h"
 
 struct nfsd3_getattrargs {
 	struct GETATTR3args	xdrgen;
@@ -25,6 +26,13 @@ struct nfsd3_setattrargs {
 };
 
 static_assert(offsetof(struct nfsd3_setattrargs, xdrgen) == 0);
+
+struct nfsd3_lookupargs {
+	struct LOOKUP3args	xdrgen;
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_lookupargs, xdrgen) == 0);
 
 struct nfsd3_diropargs {
 	struct svc_fh		fh;
@@ -139,6 +147,14 @@ struct nfsd3_setattrres {
 };
 
 static_assert(offsetof(struct nfsd3_setattrres, xdrgen) == 0);
+
+struct nfsd3_lookupres {
+	struct LOOKUP3res	xdrgen;
+	u8                      fh_data[NFS3_FHSIZE];
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_lookupres, xdrgen) == 0);
 
 /* LOOKUP, CREATE, MKDIR, SYMLINK, MKNOD */
 struct nfsd3_diropres  {
@@ -262,6 +278,7 @@ struct nfsd3_fhandle_pair {
 union nfsd3_xdrstore {
 	struct nfsd3_getattrargs	getattrargs;
 	struct nfsd3_setattrargs	setattrargs;
+	struct nfsd3_lookupargs		lookupargs;
 	struct nfsd3_diropargs		diropargs;
 	struct nfsd3_readargs		readargs;
 	struct nfsd3_writeargs		writeargs;
@@ -273,6 +290,7 @@ union nfsd3_xdrstore {
 
 	struct nfsd3_getattrres		getattrres;
 	struct nfsd3_setattrres		setattrres;
+	struct nfsd3_lookupres		lookupres;
 	struct nfsd3_diropres 		diropres;
 	struct nfsd3_accessres		accessres;
 	struct nfsd3_readlinkres	readlinkres;
@@ -306,7 +324,6 @@ bool nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *x
 bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
 bool nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_encode_lookupres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_accessres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_readlinkres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_readres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
