@@ -374,23 +374,37 @@ nfsd3_proc_lookup(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Check file access
+/**
+ * nfsd3_proc_access - NFSv3 ACCESS - Check access permission
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_access(struct svc_rqst *rqstp)
 {
 	struct nfsd3_accessargs *argp = rqstp->rq_argp;
 	struct nfsd3_accessres *resp = rqstp->rq_resp;
+	struct svc_fh *fhp = &argp->fh;
 
-	dprintk("nfsd: ACCESS(3)   %s 0x%x\n",
-				SVCFH_fmt(&argp->fh),
-				argp->access);
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.object);
 
-	fh_copy(&resp->fh, &argp->fh);
-	resp->access = argp->access;
-	resp->status = nfsd_access(rqstp, &resp->fh, &resp->access, NULL);
-	resp->status = nfsd3_map_status(resp->status);
+	resp->xdrgen.status = nfsd_access(rqstp, fhp, &argp->xdrgen.access,
+					  NULL);
+
+	if (resp->xdrgen.status == nfs_ok) {
+		struct ACCESS3resok *resok = &resp->xdrgen.u.resok;
+
+		resok->access = argp->xdrgen.access;
+		nfsd3_fill_post_op_attr(rqstp, &resok->obj_attributes, fhp);
+	} else {
+		struct ACCESS3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_post_op_attr(rqstp, &resfail->obj_attributes, fhp);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -1074,14 +1088,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_ACCESS] = {
 		.pc_func = nfsd3_proc_access,
-		.pc_decode = nfs3svc_decode_accessargs,
-		.pc_encode = nfs3svc_encode_accessres,
-		.pc_release = nfs3svc_release_fhandle,
+		.pc_decode = nfs_svc_decode_ACCESS3args,
+		.pc_encode = nfs_svc_encode_ACCESS3res,
 		.pc_argsize = sizeof(struct nfsd3_accessargs),
-		.pc_argzero = sizeof(struct nfsd3_accessargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_accessres),
 		.pc_cachetype = RC_NOCACHE,
-		.pc_xdrressize = ST+pAT+1,
+		.pc_xdrressize = NFS3_ACCESS3res_sz,
 		.pc_name = "ACCESS",
 	},
 	[NFSPROC3_READLINK] = {
