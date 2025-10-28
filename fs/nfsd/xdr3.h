@@ -104,6 +104,13 @@ struct nfsd3_mknodargs {
 
 static_assert(offsetof(struct nfsd3_mknodargs, xdrgen) == 0);
 
+struct nfsd3_removeargs {
+	struct REMOVE3args	xdrgen;
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_removeargs, xdrgen) == 0);
+
 struct nfsd3_renameargs {
 	struct svc_fh		ffh;
 	char *			fname;
@@ -236,6 +243,12 @@ struct nfsd3_mknodres {
 
 static_assert(offsetof(struct nfsd3_mknodres, xdrgen) == 0);
 
+struct nfsd3_removeres {
+	struct REMOVE3res	xdrgen;
+};
+
+static_assert(offsetof(struct nfsd3_removeres, xdrgen) == 0);
+
 struct nfsd3_renameres {
 	__be32			status;
 	struct svc_fh		ffh;
@@ -331,6 +344,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_mkdirargs		mkdirargs;
 	struct nfsd3_symlinkargs	symlinkargs;
 	struct nfsd3_mknodargs		mknodargs;
+	struct nfsd3_removeargs		removeargs;
 	struct nfsd3_renameargs		renameargs;
 	struct nfsd3_linkargs		linkargs;
 	struct nfsd3_readdirargs	readdirargs;
@@ -346,6 +360,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_mkdirres		mkdirres;
 	struct nfsd3_symlinkres		symlinkres;
 	struct nfsd3_mknodres		mknodres;
+	struct nfsd3_removeres		removeres;
 	struct nfsd3_renameres		renameres;
 	struct nfsd3_linkres		linkres;
 	struct nfsd3_readdirres		readdirres;
