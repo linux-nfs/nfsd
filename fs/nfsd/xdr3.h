@@ -10,6 +10,13 @@
 
 #include "xdr.h"
 
+struct nfsd3_getattrargs {
+	struct GETATTR3args	xdrgen;
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_getattrargs, xdrgen) == 0);
+
 struct nfsd3_sattrargs {
 	struct svc_fh		fh;
 	struct iattr		attrs;
@@ -116,8 +123,14 @@ struct nfsd3_setaclargs {
 struct nfsd3_attrstat {
 	__be32			status;
 	struct svc_fh		fh;
+};
+
+struct nfsd3_getattrres {
+	struct GETATTR3res	xdrgen;
 	struct kstat            stat;
 };
+
+static_assert(offsetof(struct nfsd3_getattrres, xdrgen) == 0);
 
 /* LOOKUP, CREATE, MKDIR, SYMLINK, MKNOD */
 struct nfsd3_diropres  {
@@ -239,6 +252,7 @@ struct nfsd3_fhandle_pair {
  * Storage requirements for XDR arguments and results.
  */
 union nfsd3_xdrstore {
+	struct nfsd3_getattrargs	getattrargs;
 	struct nfsd3_sattrargs		sattrargs;
 	struct nfsd3_diropargs		diropargs;
 	struct nfsd3_readargs		readargs;
@@ -248,6 +262,8 @@ union nfsd3_xdrstore {
 	struct nfsd3_linkargs		linkargs;
 	struct nfsd3_symlinkargs	symlinkargs;
 	struct nfsd3_readdirargs	readdirargs;
+
+	struct nfsd3_getattrres		getattrres;
 	struct nfsd3_diropres 		diropres;
 	struct nfsd3_accessres		accessres;
 	struct nfsd3_readlinkres	readlinkres;
@@ -281,7 +297,6 @@ bool nfs3svc_decode_readdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
-bool nfs3svc_encode_getattrres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_lookupres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_accessres(struct svc_rqst *rqstp, struct xdr_stream *xdr);

@@ -52,6 +52,77 @@ static __be32 nfsd3_map_status(__be32 status)
 	return status;
 }
 
+/* XDR decoding has already checked that the FH length is valid */
+static __always_inline void
+nfsd3_fh3_to_svc_fh(struct svc_fh *fhp, const struct nfs_fh3 *fh3)
+{
+	fh_init(fhp, NFS3_FHSIZE);
+	fhp->fh_handle.fh_size = fh3->data.len;
+	memcpy(&fhp->fh_handle.fh_raw, fh3->data.data, fh3->data.len);
+}
+
+static __always_inline void
+nfsd3_timespec64_to_nfstime3(struct nfstime3 *dst,
+			     const struct timespec64 *src)
+{
+	dst->seconds = src->tv_sec;
+	dst->nseconds = src->tv_nsec;
+}
+
+static u32
+nfsd3_mode_to_ftype3(umode_t mode)
+{
+	switch (mode & S_IFMT) {
+	case S_IFREG:  return NF3REG;
+	case S_IFDIR:  return NF3DIR;
+	case S_IFBLK:  return NF3BLK;
+	case S_IFCHR:  return NF3CHR;
+	case S_IFLNK:  return NF3LNK;
+	case S_IFSOCK: return NF3SOCK;
+	case S_IFIFO:  return NF3FIFO;
+	}
+
+	pr_warn_once("NFSD: unexpected file type: mode=0%o\n", mode);
+	return NF3REG;
+}
+
+static void
+nfsd3_stat_to_fattr3(struct svc_rqst *rqstp, struct fattr3 *fattr,
+		     const struct kstat *stat, const struct svc_fh *fhp)
+{
+	struct user_namespace *userns = nfsd_user_namespace(rqstp);
+
+	fattr->type = nfsd3_mode_to_ftype3(stat->mode);
+	fattr->mode = stat->mode & S_IALLUGO;
+	fattr->nlink = stat->nlink;
+	fattr->uid = from_kuid_munged(userns, stat->uid);
+	fattr->gid = from_kgid_munged(userns, stat->gid);
+	if (S_ISLNK(stat->mode) && stat->size > NFS3_MAXPATHLEN)
+		fattr->size = NFS3_MAXPATHLEN;
+	else
+		fattr->size = stat->size;
+	fattr->used = stat->blocks << 9;
+	fattr->rdev.specdata1 = MAJOR(stat->rdev);
+	fattr->rdev.specdata2 = MINOR(stat->rdev);
+
+	switch (fsid_source(fhp)) {
+	case FSIDSOURCE_FSID:
+		fattr->fsid = (u64)fhp->fh_export->ex_fsid;
+		break;
+	case FSIDSOURCE_UUID:
+		fattr->fsid = ((u64 *)fhp->fh_export->ex_uuid)[0];
+		fattr->fsid ^= ((u64 *)fhp->fh_export->ex_uuid)[1];
+		break;
+	default:
+		fattr->fsid = (u64)huge_encode_dev(fhp->fh_dentry->d_sb->s_dev);
+	}
+	fattr->fileid = stat->ino;
+
+	nfsd3_timespec64_to_nfstime3(&fattr->atime, &stat->atime);
+	nfsd3_timespec64_to_nfstime3(&fattr->mtime, &stat->mtime);
+	nfsd3_timespec64_to_nfstime3(&fattr->ctime, &stat->ctime);
+}
+
 /*
  * A full specification of each of the following NFSv3 procedures is
  * available in RFC 1813 Section 3.3.
@@ -69,26 +140,39 @@ nfsd3_proc_null(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Get a file's attributes
+/**
+ * nfsd3_proc_getattr - NFSv3 GETATTR - Get file attributes
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_getattr(struct svc_rqst *rqstp)
 {
-	struct nfsd_fhandle *argp = rqstp->rq_argp;
-	struct nfsd3_attrstat *resp = rqstp->rq_resp;
+	struct nfsd3_getattrargs *argp = rqstp->rq_argp;
+	struct nfsd3_getattrres *resp = rqstp->rq_resp;
+	struct kstat *statp = &resp->stat;
+	struct svc_fh *fhp = &argp->fh;
 
-	trace_nfsd_vfs_getattr(rqstp, &argp->fh);
-
-	fh_copy(&resp->fh, &argp->fh);
-	resp->status = fh_verify(rqstp, &resp->fh, 0,
-				 NFSD_MAY_NOP | NFSD_MAY_BYPASS_GSS_ON_ROOT);
-	if (resp->status != nfs_ok)
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.object);
+	trace_nfsd_vfs_getattr(rqstp, fhp);
+	resp->xdrgen.status = fh_verify(rqstp, fhp, 0, NFSD_MAY_NOP |
+					NFSD_MAY_BYPASS_GSS_ON_ROOT);
+	if (resp->xdrgen.status != nfs_ok)
 		goto out;
 
-	resp->status = fh_getattr(&resp->fh, &resp->stat);
+	resp->xdrgen.status = fh_getattr(fhp, statp);
+
 out:
-	resp->status = nfsd3_map_status(resp->status);
+	if (resp->xdrgen.status == nfs_ok) {
+		lease_get_mtime(d_inode(fhp->fh_dentry), &statp->mtime);
+		nfsd3_stat_to_fattr3(rqstp, &resp->xdrgen.u.resok.obj_attributes,
+				     statp, fhp);
+	} else {
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -781,12 +865,10 @@ out:
  * NFSv3 Server procedures.
  * Only the results of non-idempotent operations are cached.
  */
-#define nfs3svc_encode_attrstatres	nfs3svc_encode_attrstat
 #define nfs3svc_encode_wccstatres	nfs3svc_encode_wccstat
 #define nfsd3_mkdirargs			nfsd3_createargs
 #define nfsd3_readdirplusargs		nfsd3_readdirargs
 #define nfsd3_fhandleargs		nfsd_fhandle
-#define nfsd3_attrstatres		nfsd3_attrstat
 #define nfsd3_wccstatres		nfsd3_attrstat
 
 #define ST 1		/* status*/
@@ -809,14 +891,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_GETATTR] = {
 		.pc_func = nfsd3_proc_getattr,
-		.pc_decode = nfs3svc_decode_fhandleargs,
-		.pc_encode = nfs3svc_encode_getattrres,
-		.pc_release = nfs3svc_release_fhandle,
-		.pc_argsize = sizeof(struct nfsd_fhandle),
-		.pc_argzero = sizeof(struct nfsd_fhandle),
-		.pc_ressize = sizeof(struct nfsd3_attrstatres),
+		.pc_decode = nfs_svc_decode_GETATTR3args,
+		.pc_encode = nfs_svc_encode_GETATTR3res,
+		.pc_argsize = sizeof(struct nfsd3_getattrargs),
+		.pc_argzero = 0,
+		.pc_ressize = sizeof(struct nfsd3_getattrres),
 		.pc_cachetype = RC_NOCACHE,
-		.pc_xdrressize = ST+AT,
+		.pc_xdrressize = NFS3_GETATTR3res_sz,
 		.pc_name = "GETATTR",
 	},
 	[NFSPROC3_SETATTR] = {
