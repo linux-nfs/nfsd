@@ -45,6 +45,9 @@
 #include <linux/string_helpers.h>
 #include <linux/fsnotify.h>
 #include <linux/rhashtable.h>
+
+#include <linux/nfs.h>
+#include <linux/nfs4.h>
 #include <linux/nfs_ssc.h>
 
 #include "xdr4.h"

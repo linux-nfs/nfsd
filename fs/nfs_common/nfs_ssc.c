@@ -9,7 +9,9 @@
 
 #include <linux/module.h>
 #include <linux/fs.h>
+#include <linux/nfs_fs.h>
 #include <linux/nfs_ssc.h>
+
 #include "../nfs/nfs4_fs.h"
 
 

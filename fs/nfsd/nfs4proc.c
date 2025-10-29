@@ -38,8 +38,12 @@
 #include <linux/slab.h>
 #include <linux/kthread.h>
 #include <linux/namei.h>
+#include <linux/pagemap.h>
 
 #include <linux/sunrpc/addr.h>
+
+#include <linux/nfs.h>
+#include <linux/nfs4.h>
 #include <linux/nfs_ssc.h>
 
 #include "idmap.h"

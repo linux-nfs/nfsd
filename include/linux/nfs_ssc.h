@@ -7,7 +7,6 @@
  * Copyright (c) 2020, Oracle and/or its affiliates.
  */
 
-#include <linux/nfs_fs.h>
 #include <linux/sunrpc/svc.h>
 
 extern struct nfs_ssc_client_ops_tbl nfs_ssc_client_tbl;
