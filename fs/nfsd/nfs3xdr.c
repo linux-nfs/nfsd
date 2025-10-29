@@ -582,10 +582,10 @@ nfs3svc_decode_createargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	if (xdr_stream_decode_u32(xdr, &args->createmode) < 0)
 		return false;
 	switch (args->createmode) {
-	case NFS3_CREATE_UNCHECKED:
-	case NFS3_CREATE_GUARDED:
+	case UNCHECKED:
+	case GUARDED:
 		return svcxdr_decode_sattr3(rqstp, xdr, &args->attrs);
-	case NFS3_CREATE_EXCLUSIVE:
+	case EXCLUSIVE:
 		args->verf = xdr_inline_decode(xdr, NFS3_CREATEVERFSIZE);
 		if (!args->verf)
 			return false;

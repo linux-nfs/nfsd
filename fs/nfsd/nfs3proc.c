@@ -303,7 +303,7 @@ nfsd3_create_file(struct svc_rqst *rqstp, struct svc_fh *fhp,
 
 	v_mtime = 0;
 	v_atime = 0;
-	if (argp->createmode == NFS3_CREATE_EXCLUSIVE) {
+	if (argp->createmode == EXCLUSIVE) {
 		u32 *verifier = (u32 *)argp->verf;
 
 		/*
@@ -319,15 +319,15 @@ nfsd3_create_file(struct svc_rqst *rqstp, struct svc_fh *fhp,
 		status = nfs_ok;
 
 		switch (argp->createmode) {
-		case NFS3_CREATE_UNCHECKED:
+		case UNCHECKED:
 			if (!d_is_reg(child))
 				break;
 			iap->ia_valid &= ATTR_SIZE;
 			goto set_attr;
-		case NFS3_CREATE_GUARDED:
+		case GUARDED:
 			status = nfserr_exist;
 			break;
-		case NFS3_CREATE_EXCLUSIVE:
+		case EXCLUSIVE:
 			if (inode_get_mtime_sec(d_inode(child)) == v_mtime &&
 			    inode_get_atime_sec(d_inode(child)) == v_atime &&
 			    d_inode(child)->i_size == 0) {
@@ -354,7 +354,7 @@ nfsd3_create_file(struct svc_rqst *rqstp, struct svc_fh *fhp,
 	/* A newly created file already has a file size of zero. */
 	if ((iap->ia_valid & ATTR_SIZE) && (iap->ia_size == 0))
 		iap->ia_valid &= ~ATTR_SIZE;
-	if (argp->createmode == NFS3_CREATE_EXCLUSIVE) {
+	if (argp->createmode == EXCLUSIVE) {
 		iap->ia_valid = ATTR_MTIME | ATTR_ATIME |
 				ATTR_MTIME_SET | ATTR_ATIME_SET;
 		iap->ia_mtime.tv_sec = v_mtime;
@@ -789,7 +789,7 @@ out:
 #define WC (7+pAT)	/* WCC attributes */
 
 static const struct svc_procedure nfsd_procedures3[22] = {
-	[NFS3PROC_NULL] = {
+	[NFSPROC3_NULL] = {
 		.pc_func = nfsd3_proc_null,
 		.pc_decode = nfssvc_decode_voidarg,
 		.pc_encode = nfssvc_encode_voidres,
@@ -800,7 +800,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST,
 		.pc_name = "NULL",
 	},
-	[NFS3PROC_GETATTR] = {
+	[NFSPROC3_GETATTR] = {
 		.pc_func = nfsd3_proc_getattr,
 		.pc_decode = nfs3svc_decode_fhandleargs,
 		.pc_encode = nfs3svc_encode_getattrres,
@@ -812,7 +812,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+AT,
 		.pc_name = "GETATTR",
 	},
-	[NFS3PROC_SETATTR] = {
+	[NFSPROC3_SETATTR] = {
 		.pc_func = nfsd3_proc_setattr,
 		.pc_decode = nfs3svc_decode_sattrargs,
 		.pc_encode = nfs3svc_encode_wccstatres,
@@ -824,7 +824,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+WC,
 		.pc_name = "SETATTR",
 	},
-	[NFS3PROC_LOOKUP] = {
+	[NFSPROC3_LOOKUP] = {
 		.pc_func = nfsd3_proc_lookup,
 		.pc_decode = nfs3svc_decode_diropargs,
 		.pc_encode = nfs3svc_encode_lookupres,
@@ -836,7 +836,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+FH+pAT+pAT,
 		.pc_name = "LOOKUP",
 	},
-	[NFS3PROC_ACCESS] = {
+	[NFSPROC3_ACCESS] = {
 		.pc_func = nfsd3_proc_access,
 		.pc_decode = nfs3svc_decode_accessargs,
 		.pc_encode = nfs3svc_encode_accessres,
@@ -848,7 +848,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+1,
 		.pc_name = "ACCESS",
 	},
-	[NFS3PROC_READLINK] = {
+	[NFSPROC3_READLINK] = {
 		.pc_func = nfsd3_proc_readlink,
 		.pc_decode = nfs3svc_decode_fhandleargs,
 		.pc_encode = nfs3svc_encode_readlinkres,
@@ -860,7 +860,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+1+NFS3_MAXPATHLEN/4,
 		.pc_name = "READLINK",
 	},
-	[NFS3PROC_READ] = {
+	[NFSPROC3_READ] = {
 		.pc_func = nfsd3_proc_read,
 		.pc_decode = nfs3svc_decode_readargs,
 		.pc_encode = nfs3svc_encode_readres,
@@ -872,7 +872,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+4+NFSSVC_MAXBLKSIZE/4,
 		.pc_name = "READ",
 	},
-	[NFS3PROC_WRITE] = {
+	[NFSPROC3_WRITE] = {
 		.pc_func = nfsd3_proc_write,
 		.pc_decode = nfs3svc_decode_writeargs,
 		.pc_encode = nfs3svc_encode_writeres,
@@ -884,7 +884,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+WC+4,
 		.pc_name = "WRITE",
 	},
-	[NFS3PROC_CREATE] = {
+	[NFSPROC3_CREATE] = {
 		.pc_func = nfsd3_proc_create,
 		.pc_decode = nfs3svc_decode_createargs,
 		.pc_encode = nfs3svc_encode_createres,
@@ -896,7 +896,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "CREATE",
 	},
-	[NFS3PROC_MKDIR] = {
+	[NFSPROC3_MKDIR] = {
 		.pc_func = nfsd3_proc_mkdir,
 		.pc_decode = nfs3svc_decode_mkdirargs,
 		.pc_encode = nfs3svc_encode_createres,
@@ -908,7 +908,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "MKDIR",
 	},
-	[NFS3PROC_SYMLINK] = {
+	[NFSPROC3_SYMLINK] = {
 		.pc_func = nfsd3_proc_symlink,
 		.pc_decode = nfs3svc_decode_symlinkargs,
 		.pc_encode = nfs3svc_encode_createres,
@@ -920,7 +920,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "SYMLINK",
 	},
-	[NFS3PROC_MKNOD] = {
+	[NFSPROC3_MKNOD] = {
 		.pc_func = nfsd3_proc_mknod,
 		.pc_decode = nfs3svc_decode_mknodargs,
 		.pc_encode = nfs3svc_encode_createres,
@@ -932,7 +932,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "MKNOD",
 	},
-	[NFS3PROC_REMOVE] = {
+	[NFSPROC3_REMOVE] = {
 		.pc_func = nfsd3_proc_remove,
 		.pc_decode = nfs3svc_decode_diropargs,
 		.pc_encode = nfs3svc_encode_wccstatres,
@@ -944,7 +944,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+WC,
 		.pc_name = "REMOVE",
 	},
-	[NFS3PROC_RMDIR] = {
+	[NFSPROC3_RMDIR] = {
 		.pc_func = nfsd3_proc_rmdir,
 		.pc_decode = nfs3svc_decode_diropargs,
 		.pc_encode = nfs3svc_encode_wccstatres,
@@ -956,7 +956,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+WC,
 		.pc_name = "RMDIR",
 	},
-	[NFS3PROC_RENAME] = {
+	[NFSPROC3_RENAME] = {
 		.pc_func = nfsd3_proc_rename,
 		.pc_decode = nfs3svc_decode_renameargs,
 		.pc_encode = nfs3svc_encode_renameres,
@@ -968,7 +968,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+WC+WC,
 		.pc_name = "RENAME",
 	},
-	[NFS3PROC_LINK] = {
+	[NFSPROC3_LINK] = {
 		.pc_func = nfsd3_proc_link,
 		.pc_decode = nfs3svc_decode_linkargs,
 		.pc_encode = nfs3svc_encode_linkres,
@@ -980,7 +980,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+WC,
 		.pc_name = "LINK",
 	},
-	[NFS3PROC_READDIR] = {
+	[NFSPROC3_READDIR] = {
 		.pc_func = nfsd3_proc_readdir,
 		.pc_decode = nfs3svc_decode_readdirargs,
 		.pc_encode = nfs3svc_encode_readdirres,
@@ -991,7 +991,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_cachetype = RC_NOCACHE,
 		.pc_name = "READDIR",
 	},
-	[NFS3PROC_READDIRPLUS] = {
+	[NFSPROC3_READDIRPLUS] = {
 		.pc_func = nfsd3_proc_readdirplus,
 		.pc_decode = nfs3svc_decode_readdirplusargs,
 		.pc_encode = nfs3svc_encode_readdirres,
@@ -1002,7 +1002,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_cachetype = RC_NOCACHE,
 		.pc_name = "READDIRPLUS",
 	},
-	[NFS3PROC_FSSTAT] = {
+	[NFSPROC3_FSSTAT] = {
 		.pc_func = nfsd3_proc_fsstat,
 		.pc_decode = nfs3svc_decode_fhandleargs,
 		.pc_encode = nfs3svc_encode_fsstatres,
@@ -1013,7 +1013,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+2*6+1,
 		.pc_name = "FSSTAT",
 	},
-	[NFS3PROC_FSINFO] = {
+	[NFSPROC3_FSINFO] = {
 		.pc_func = nfsd3_proc_fsinfo,
 		.pc_decode = nfs3svc_decode_fhandleargs,
 		.pc_encode = nfs3svc_encode_fsinfores,
@@ -1024,7 +1024,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+12,
 		.pc_name = "FSINFO",
 	},
-	[NFS3PROC_PATHCONF] = {
+	[NFSPROC3_PATHCONF] = {
 		.pc_func = nfsd3_proc_pathconf,
 		.pc_decode = nfs3svc_decode_fhandleargs,
 		.pc_encode = nfs3svc_encode_pathconfres,
@@ -1035,7 +1035,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_xdrressize = ST+pAT+6,
 		.pc_name = "PATHCONF",
 	},
-	[NFS3PROC_COMMIT] = {
+	[NFSPROC3_COMMIT] = {
 		.pc_func = nfsd3_proc_commit,
 		.pc_decode = nfs3svc_decode_commitargs,
 		.pc_encode = nfs3svc_encode_commitres,

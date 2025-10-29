@@ -752,11 +752,12 @@ struct accessmap {
 	u32		access;
 	int		how;
 };
+
 static struct accessmap	nfs3_regaccess[] = {
-    {	NFS3_ACCESS_READ,	NFSD_MAY_READ			},
-    {	NFS3_ACCESS_EXECUTE,	NFSD_MAY_EXEC			},
-    {	NFS3_ACCESS_MODIFY,	NFSD_MAY_WRITE|NFSD_MAY_TRUNC	},
-    {	NFS3_ACCESS_EXTEND,	NFSD_MAY_WRITE			},
+    {	ACCESS3_READ,		NFSD_MAY_READ			},
+    {	ACCESS3_EXECUTE,	NFSD_MAY_EXEC			},
+    {	ACCESS3_MODIFY,		NFSD_MAY_WRITE|NFSD_MAY_TRUNC	},
+    {	ACCESS3_EXTEND,		NFSD_MAY_WRITE			},
 
 #ifdef CONFIG_NFSD_V4
     {	NFS4_ACCESS_XAREAD,	NFSD_MAY_READ			},
@@ -768,11 +769,11 @@ static struct accessmap	nfs3_regaccess[] = {
 };
 
 static struct accessmap	nfs3_diraccess[] = {
-    {	NFS3_ACCESS_READ,	NFSD_MAY_READ			},
-    {	NFS3_ACCESS_LOOKUP,	NFSD_MAY_EXEC			},
-    {	NFS3_ACCESS_MODIFY,	NFSD_MAY_EXEC|NFSD_MAY_WRITE|NFSD_MAY_TRUNC},
-    {	NFS3_ACCESS_EXTEND,	NFSD_MAY_EXEC|NFSD_MAY_WRITE	},
-    {	NFS3_ACCESS_DELETE,	NFSD_MAY_REMOVE			},
+    {	ACCESS3_READ,		NFSD_MAY_READ			},
+    {	ACCESS3_LOOKUP,		NFSD_MAY_EXEC			},
+    {	ACCESS3_MODIFY,		NFSD_MAY_EXEC|NFSD_MAY_WRITE|NFSD_MAY_TRUNC},
+    {	ACCESS3_EXTEND,		NFSD_MAY_EXEC|NFSD_MAY_WRITE	},
+    {	ACCESS3_DELETE,		NFSD_MAY_REMOVE			},
 
 #ifdef CONFIG_NFSD_V4
     {	NFS4_ACCESS_XAREAD,	NFSD_MAY_READ			},
@@ -791,10 +792,10 @@ static struct accessmap	nfs3_anyaccess[] = {
 	 * mainly at mode bits, and we make sure to ignore read-only
 	 * filesystem checks
 	 */
-    {	NFS3_ACCESS_READ,	NFSD_MAY_READ			},
-    {	NFS3_ACCESS_EXECUTE,	NFSD_MAY_EXEC			},
-    {	NFS3_ACCESS_MODIFY,	NFSD_MAY_WRITE|NFSD_MAY_LOCAL_ACCESS	},
-    {	NFS3_ACCESS_EXTEND,	NFSD_MAY_WRITE|NFSD_MAY_LOCAL_ACCESS	},
+    {	ACCESS3_READ,		NFSD_MAY_READ			},
+    {	ACCESS3_EXECUTE,	NFSD_MAY_EXEC			},
+    {	ACCESS3_MODIFY,		NFSD_MAY_WRITE|NFSD_MAY_LOCAL_ACCESS	},
+    {	ACCESS3_EXTEND,		NFSD_MAY_WRITE|NFSD_MAY_LOCAL_ACCESS	},
 
     {	0,			0				}
 };

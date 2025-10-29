@@ -14,12 +14,13 @@
 
 #include <linux/nfs.h>
 #include <linux/nfs2.h>
-#include <linux/nfs3.h>
 #include <linux/nfs4.h>
 #include <linux/sunrpc/svc.h>
 #include <linux/sunrpc/svc_xprt.h>
 #include <linux/sunrpc/msg_prot.h>
 #include <linux/sunrpc/addr.h>
+
+#include "nfs3xdr_gen.h"
 
 #include <uapi/linux/nfsd/debug.h>
 
@@ -42,6 +43,17 @@ bool nfsd_support_version(int vers);
 
 #include "netns.h"
 #include "stats.h"
+
+#define NF3NON		(0)
+#define NF3BAD		(8)
+
+#define NFS3_MAXNAMLEN			NAME_MAX
+#define NFS3_MAXPATHLEN			PATH_MAX
+#define NFS3_POST_OP_ATTR_WORDS		NFS3_post_op_attr_sz
+#define NFS3_ACCESS_FULL		0x003f
+
+#define NFS3_FSF_DEFAULT		0x001b
+#define NFS3_FSF_BILLYBOY		0x0018
 
 /*
  * Default and maximum payload size (NFS READ or WRITE), in bytes.
