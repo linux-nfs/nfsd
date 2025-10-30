@@ -1378,31 +1378,46 @@ nfsd3_proc_pathconf(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Commit a file (range) to stable storage.
+/**
+ * nfsd3_proc_commit - NFSv3 COMMIT - Commit data on a server to stable storage
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_commit(struct svc_rqst *rqstp)
 {
 	struct nfsd3_commitargs *argp = rqstp->rq_argp;
 	struct nfsd3_commitres *resp = rqstp->rq_resp;
+	struct svc_fh *fhp = &argp->fh;
 	struct nfsd_file *nf;
 
-	dprintk("nfsd: COMMIT(3)   %s %u@%Lu\n",
-				SVCFH_fmt(&argp->fh),
-				argp->count,
-				(unsigned long long) argp->offset);
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.file);
 
-	fh_copy(&resp->fh, &argp->fh);
-	resp->status = nfsd_file_acquire_gc(rqstp, &resp->fh, NFSD_MAY_WRITE |
-					    NFSD_MAY_NOT_BREAK_LEASE, &nf);
-	if (resp->status)
+	resp->xdrgen.status = nfsd_file_acquire_gc(rqstp, fhp, NFSD_MAY_WRITE |
+						   NFSD_MAY_NOT_BREAK_LEASE, &nf);
+	if (resp->xdrgen.status)
 		goto out;
-	resp->status = nfsd_commit(rqstp, &resp->fh, nf, argp->offset,
-				   argp->count, resp->verf);
+	resp->xdrgen.status = nfsd_commit(rqstp, fhp, nf,
+					  argp->xdrgen.offset, argp->xdrgen.count,
+					  (__be32 *)resp->xdrgen.u.resok.verf);
 	nfsd_file_put(nf);
+
 out:
-	resp->status = nfsd3_map_status(resp->status);
+	if (resp->xdrgen.status == nfs_ok) {
+		struct COMMIT3resok *resok = &resp->xdrgen.u.resok;
+
+		nfsd3_fill_wcc_data(rqstp, &resok->file_wcc, fhp);
+		nfsd3_fill_post_op_attr(rqstp, &resok->file_wcc.after, fhp);
+	} else {
+		struct COMMIT3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resfail->file_wcc, fhp);
+		nfsd3_fill_post_op_attr(rqstp, &resfail->file_wcc.after, fhp);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -1412,11 +1427,6 @@ out:
  * Only the results of non-idempotent operations are cached.
  */
 #define nfsd3_readdirplusargs		nfsd3_readdirargs
-
-#define ST 1		/* status*/
-#define AT 21		/* attributes */
-#define pAT (1+AT)	/* post attributes - conditional */
-#define WC (7+pAT)	/* WCC attributes */
 
 static const struct svc_procedure nfsd_procedures3[22] = {
 	[NFSPROC3_NULL] = {
@@ -1652,14 +1662,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_COMMIT] = {
 		.pc_func = nfsd3_proc_commit,
-		.pc_decode = nfs3svc_decode_commitargs,
-		.pc_encode = nfs3svc_encode_commitres,
-		.pc_release = nfs3svc_release_fhandle,
+		.pc_decode = nfs_svc_decode_COMMIT3args,
+		.pc_encode = nfs_svc_encode_COMMIT3res,
 		.pc_argsize = sizeof(struct nfsd3_commitargs),
-		.pc_argzero = sizeof(struct nfsd3_commitargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_commitres),
 		.pc_cachetype = RC_NOCACHE,
-		.pc_xdrressize = ST+WC+2,
+		.pc_xdrressize = NFS3_COMMIT3res_sz,
 		.pc_name = "COMMIT",
 	},
 };
