@@ -97,13 +97,12 @@ struct nfsd3_symlinkargs {
 static_assert(offsetof(struct nfsd3_symlinkargs, xdrgen) == 0);
 
 struct nfsd3_mknodargs {
+	struct MKNOD3args	xdrgen;
 	struct svc_fh		fh;
-	char *			name;
-	unsigned int		len;
-	__u32			ftype;
-	__u32			major, minor;
 	struct iattr		attrs;
 };
+
+static_assert(offsetof(struct nfsd3_mknodargs, xdrgen) == 0);
 
 struct nfsd3_renameargs {
 	struct svc_fh		ffh;
@@ -173,13 +172,6 @@ struct nfsd3_lookupres {
 
 static_assert(offsetof(struct nfsd3_lookupres, xdrgen) == 0);
 
-/* LOOKUP, CREATE, MKDIR, SYMLINK, MKNOD */
-struct nfsd3_diropres  {
-	__be32			status;
-	struct svc_fh		dirfh;
-	struct svc_fh		fh;
-};
-
 struct nfsd3_accessres {
 	struct ACCESS3res	xdrgen;
 	struct svc_fh		fh;
@@ -235,6 +227,14 @@ struct nfsd3_symlinkres {
 };
 
 static_assert(offsetof(struct nfsd3_symlinkres, xdrgen) == 0);
+
+struct nfsd3_mknodres {
+	struct MKNOD3res	xdrgen;
+	u8			fh_data[NFS3_FHSIZE];
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_mknodres, xdrgen) == 0);
 
 struct nfsd3_renameres {
 	__be32			status;
@@ -330,6 +330,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_createargs		createargs;
 	struct nfsd3_mkdirargs		mkdirargs;
 	struct nfsd3_symlinkargs	symlinkargs;
+	struct nfsd3_mknodargs		mknodargs;
 	struct nfsd3_renameargs		renameargs;
 	struct nfsd3_linkargs		linkargs;
 	struct nfsd3_readdirargs	readdirargs;
@@ -337,7 +338,6 @@ union nfsd3_xdrstore {
 	struct nfsd3_getattrres		getattrres;
 	struct nfsd3_setattrres		setattrres;
 	struct nfsd3_lookupres		lookupres;
-	struct nfsd3_diropres 		diropres;
 	struct nfsd3_accessres		accessres;
 	struct nfsd3_readlinkres	readlinkres;
 	struct nfsd3_readres		readres;
@@ -345,6 +345,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_createres		createres;
 	struct nfsd3_mkdirres		mkdirres;
 	struct nfsd3_symlinkres		symlinkres;
+	struct nfsd3_mknodres		mknodres;
 	struct nfsd3_renameres		renameres;
 	struct nfsd3_linkres		linkres;
 	struct nfsd3_readdirres		readdirres;
@@ -360,7 +361,6 @@ union nfsd3_xdrstore {
 bool nfs3svc_decode_fhandleargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_diropargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_decode_write3arg(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_decode_mknodargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_renameargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_linkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
@@ -370,7 +370,6 @@ bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_encode_readlink3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_encode_read3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_encode_createres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_renameres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_linkres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_readdirres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
