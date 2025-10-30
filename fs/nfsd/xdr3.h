@@ -88,6 +88,14 @@ struct nfsd3_mkdirargs {
 
 static_assert(offsetof(struct nfsd3_mkdirargs, xdrgen) == 0);
 
+struct nfsd3_symlinkargs {
+	struct SYMLINK3args	xdrgen;
+	struct svc_fh		ffh;
+	struct iattr		attrs;
+};
+
+static_assert(offsetof(struct nfsd3_symlinkargs, xdrgen) == 0);
+
 struct nfsd3_mknodargs {
 	struct svc_fh		fh;
 	char *			name;
@@ -111,16 +119,6 @@ struct nfsd3_linkargs {
 	struct svc_fh		tfh;
 	char *			tname;
 	unsigned int		tlen;
-};
-
-struct nfsd3_symlinkargs {
-	struct svc_fh		ffh;
-	char *			fname;
-	unsigned int		flen;
-	char *			tname;
-	unsigned int		tlen;
-	struct iattr		attrs;
-	struct kvec		first;
 };
 
 struct nfsd3_readdirargs {
@@ -230,6 +228,14 @@ struct nfsd3_mkdirres {
 
 static_assert(offsetof(struct nfsd3_mkdirres, xdrgen) == 0);
 
+struct nfsd3_symlinkres {
+	struct SYMLINK3res	xdrgen;
+	u8			fh_data[NFS3_FHSIZE];
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_symlinkres, xdrgen) == 0);
+
 struct nfsd3_renameres {
 	__be32			status;
 	struct svc_fh		ffh;
@@ -323,9 +329,9 @@ union nfsd3_xdrstore {
 	struct nfsd3_writeargs		writeargs;
 	struct nfsd3_createargs		createargs;
 	struct nfsd3_mkdirargs		mkdirargs;
+	struct nfsd3_symlinkargs	symlinkargs;
 	struct nfsd3_renameargs		renameargs;
 	struct nfsd3_linkargs		linkargs;
-	struct nfsd3_symlinkargs	symlinkargs;
 	struct nfsd3_readdirargs	readdirargs;
 
 	struct nfsd3_getattrres		getattrres;
@@ -338,6 +344,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_writeres		writeres;
 	struct nfsd3_createres		createres;
 	struct nfsd3_mkdirres		mkdirres;
+	struct nfsd3_symlinkres		symlinkres;
 	struct nfsd3_renameres		renameres;
 	struct nfsd3_linkres		linkres;
 	struct nfsd3_readdirres		readdirres;
@@ -356,7 +363,6 @@ bool nfs_svc_decode_write3arg(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_mknodargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_renameargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_linkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_decode_symlinkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);

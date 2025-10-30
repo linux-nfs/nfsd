@@ -809,39 +809,74 @@ out:
 	return rpc_success;
 }
 
+/**
+ * nfsd3_proc_symlink - NFSv3 SYMLINK - Create a symbolic link
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
+ */
 static __be32
 nfsd3_proc_symlink(struct svc_rqst *rqstp)
 {
 	struct nfsd3_symlinkargs *argp = rqstp->rq_argp;
-	struct nfsd3_diropres *resp = rqstp->rq_resp;
-	struct nfsd_attrs attrs = {
-		.na_iattr	= &argp->attrs,
+	struct symlinkdata3 *symlink = &argp->xdrgen.symlink;
+	struct diropargs3 *where = &argp->xdrgen.where;
+	struct nfsd3_symlinkres *resp = rqstp->rq_resp;
+	struct iattr *iattrs = &argp->attrs;
+	struct svc_fh *dirfhp = &argp->ffh;
+	struct svc_fh *fhp = &resp->fh;
+	struct nfsd_attrs nattrs = {
+		.na_iattr	= iattrs,
 	};
+	struct kvec first;
+	char *tname;
 
-	if (argp->tlen == 0) {
-		resp->status = nfserr_inval;
+	fh_init(fhp, NFS3_FHSIZE);
+	nfsd3_fh3_to_svc_fh(dirfhp, &where->dir);
+	resp->xdrgen.status = nfsd3_check_filename(where->name.data,
+						   where->name.len);
+	if (resp->xdrgen.status != nfs_ok)
+		goto out;
+	nfsd3_sattr3_to_iattr(rqstp, iattrs, &symlink->symlink_attributes);
+	if (symlink->symlink_data.len == 0) {
+		resp->xdrgen.status = nfserr_inval;
 		goto out;
 	}
-	if (argp->tlen > NFS3_MAXPATHLEN) {
-		resp->status = nfserr_nametoolong;
+	if (symlink->symlink_data.len > NFS3_MAXPATHLEN) {
+		resp->xdrgen.status = nfserr_nametoolong;
 		goto out;
 	}
 
-	argp->tname = svc_fill_symlink_pathname(rqstp, &argp->first,
-						page_address(rqstp->rq_arg.pages[0]),
-						argp->tlen);
-	if (IS_ERR(argp->tname)) {
-		resp->status = nfserrno(PTR_ERR(argp->tname));
+	first.iov_base = symlink->symlink_data.data;
+	first.iov_len = symlink->symlink_data.len;
+	tname = svc_fill_symlink_pathname(rqstp, &first, NULL,
+					  symlink->symlink_data.len);
+	if (IS_ERR(tname)) {
+		resp->xdrgen.status = nfserrno(PTR_ERR(tname));
 		goto out;
 	}
+	resp->xdrgen.status = nfsd_symlink(rqstp, dirfhp,
+					   (char *)where->name.data,
+					   where->name.len, tname,
+					   &nattrs, fhp);
+	kfree(tname);
 
-	fh_copy(&resp->dirfh, &argp->ffh);
-	fh_init(&resp->fh, NFS3_FHSIZE);
-	resp->status = nfsd_symlink(rqstp, &resp->dirfh, argp->fname,
-				    argp->flen, argp->tname, &attrs, &resp->fh);
-	kfree(argp->tname);
 out:
-	resp->status = nfsd3_map_status(resp->status);
+	if (resp->xdrgen.status == nfs_ok) {
+		struct SYMLINK3resok *resok = &resp->xdrgen.u.resok;
+
+		nfsd3_fill_post_op_fh3(&resok->obj, fhp, resp->fh_data);
+		nfsd3_fill_post_op_attr(rqstp, &resok->obj_attributes, fhp);
+		nfsd3_fill_wcc_data(rqstp, &resok->dir_wcc, dirfhp);
+	} else {
+		struct SYMLINK3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resfail->dir_wcc, dirfhp);
+	}
+
+	fh_put(fhp);
+	fh_put(dirfhp);
 	return rpc_success;
 }
 
@@ -1296,14 +1331,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_SYMLINK] = {
 		.pc_func = nfsd3_proc_symlink,
-		.pc_decode = nfs3svc_decode_symlinkargs,
-		.pc_encode = nfs3svc_encode_createres,
-		.pc_release = nfs3svc_release_fhandle2,
+		.pc_decode = nfs_svc_decode_SYMLINK3args,
+		.pc_encode = nfs_svc_encode_SYMLINK3res,
 		.pc_argsize = sizeof(struct nfsd3_symlinkargs),
-		.pc_argzero = sizeof(struct nfsd3_symlinkargs),
-		.pc_ressize = sizeof(struct nfsd3_diropres),
+		.pc_argzero = 0,
+		.pc_ressize = sizeof(struct nfsd3_symlinkres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+(1+FH+pAT)+WC,
+		.pc_xdrressize = NFS3_SYMLINK3res_sz,
 		.pc_name = "SYMLINK",
 	},
 	[NFSPROC3_MKNOD] = {
