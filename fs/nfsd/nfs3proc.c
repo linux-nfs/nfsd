@@ -758,24 +758,54 @@ nfsd3_proc_create(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Make directory. This operation is not idempotent.
+/**
+ * nfsd3_proc_mkdir - NFSv3 MKDIR - Create a directory
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_mkdir(struct svc_rqst *rqstp)
 {
-	struct nfsd3_createargs *argp = rqstp->rq_argp;
-	struct nfsd3_diropres *resp = rqstp->rq_resp;
-	struct nfsd_attrs attrs = {
-		.na_iattr	= &argp->attrs,
+	struct nfsd3_mkdirargs *argp = rqstp->rq_argp;
+	struct diropargs3 *where = &argp->xdrgen.where;
+	struct nfsd3_mkdirres *resp = rqstp->rq_resp;
+	struct iattr *iattrs = &argp->attrs;
+	struct svc_fh *dirfhp = &argp->fh;
+	struct svc_fh *fhp = &resp->fh;
+	struct nfsd_attrs nattrs = {
+		.na_iattr	= iattrs,
 	};
 
-	argp->attrs.ia_valid &= ~ATTR_SIZE;
-	fh_copy(&resp->dirfh, &argp->fh);
-	fh_init(&resp->fh, NFS3_FHSIZE);
-	resp->status = nfsd_create(rqstp, &resp->dirfh, argp->name, argp->len,
-				   &attrs, S_IFDIR, 0, &resp->fh);
-	resp->status = nfsd3_map_status(resp->status);
+	nfsd3_fh3_to_svc_fh(dirfhp, &where->dir);
+	resp->xdrgen.status = nfsd3_check_filename(where->name.data,
+						   where->name.len);
+	if (resp->xdrgen.status != nfs_ok)
+		goto out;
+	nfsd3_sattr3_to_iattr(rqstp, iattrs, &argp->xdrgen.attributes);
+
+	fh_init(fhp, NFS3_FHSIZE);
+	iattrs->ia_valid &= ~ATTR_SIZE;
+	resp->xdrgen.status = nfsd_create(rqstp, dirfhp, (char *)where->name.data,
+					  where->name.len, &nattrs, S_IFDIR,
+					  0, fhp);
+
+out:
+	if (resp->xdrgen.status == nfs_ok) {
+		struct MKDIR3resok *resok = &resp->xdrgen.u.resok;
+
+		nfsd3_fill_post_op_fh3(&resok->obj, fhp, resp->fh_data);
+		nfsd3_fill_post_op_attr(rqstp, &resok->obj_attributes, fhp);
+		nfsd3_fill_wcc_data(rqstp, &resok->dir_wcc, dirfhp);
+	} else {
+		struct MKDIR3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resfail->dir_wcc, dirfhp);
+	}
+
+	fh_put(fhp);
+	fh_put(dirfhp);
 	return rpc_success;
 }
 
@@ -1143,7 +1173,6 @@ out:
  * Only the results of non-idempotent operations are cached.
  */
 #define nfs3svc_encode_wccstatres	nfs3svc_encode_wccstat
-#define nfsd3_mkdirargs			nfsd3_createargs
 #define nfsd3_readdirplusargs		nfsd3_readdirargs
 #define nfsd3_fhandleargs		nfsd_fhandle
 #define nfsd3_wccstatres		nfsd3_attrstat
@@ -1256,14 +1285,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_MKDIR] = {
 		.pc_func = nfsd3_proc_mkdir,
-		.pc_decode = nfs3svc_decode_mkdirargs,
-		.pc_encode = nfs3svc_encode_createres,
-		.pc_release = nfs3svc_release_fhandle2,
+		.pc_decode = nfs_svc_decode_MKDIR3args,
+		.pc_encode = nfs_svc_encode_MKDIR3res,
 		.pc_argsize = sizeof(struct nfsd3_mkdirargs),
-		.pc_argzero = sizeof(struct nfsd3_mkdirargs),
-		.pc_ressize = sizeof(struct nfsd3_diropres),
+		.pc_argzero = 0,
+		.pc_ressize = sizeof(struct nfsd3_mkdirres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+(1+FH+pAT)+WC,
+		.pc_xdrressize = NFS3_MKDIR3res_sz,
 		.pc_name = "MKDIR",
 	},
 	[NFSPROC3_SYMLINK] = {

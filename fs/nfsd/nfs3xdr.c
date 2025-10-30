@@ -516,16 +516,6 @@ nfs_svc_decode_write3arg(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 }
 
 bool
-nfs3svc_decode_mkdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
-{
-	struct nfsd3_createargs *args = rqstp->rq_argp;
-
-	return svcxdr_decode_diropargs3(xdr, &args->fh,
-					&args->name, &args->len) &&
-		svcxdr_decode_sattr3(rqstp, xdr, &args->attrs);
-}
-
-bool
 nfs3svc_decode_symlinkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
 	struct nfsd3_symlinkargs *args = rqstp->rq_argp;
