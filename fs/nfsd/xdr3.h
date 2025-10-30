@@ -121,11 +121,12 @@ struct nfsd3_renameargs {
 static_assert(offsetof(struct nfsd3_renameargs, xdrgen) == 0);
 
 struct nfsd3_linkargs {
+	struct LINK3args	xdrgen;
 	struct svc_fh		ffh;
 	struct svc_fh		tfh;
-	char *			tname;
-	unsigned int		tlen;
 };
+
+static_assert(offsetof(struct nfsd3_linkargs, xdrgen) == 0);
 
 struct nfsd3_readdirargs {
 	struct svc_fh		fh;
@@ -262,10 +263,10 @@ struct nfsd3_renameres {
 static_assert(offsetof(struct nfsd3_renameres, xdrgen) == 0);
 
 struct nfsd3_linkres {
-	__be32			status;
-	struct svc_fh		tfh;
-	struct svc_fh		fh;
+	struct LINK3res		xdrgen;
 };
+
+static_assert(offsetof(struct nfsd3_linkres, xdrgen) == 0);
 
 struct nfsd3_readdirres {
 	/* Components of the reply */
@@ -327,13 +328,6 @@ struct nfsd3_getaclres {
 	struct kstat		stat;
 };
 
-/* dummy type for release */
-struct nfsd3_fhandle_pair {
-	__u32			dummy;
-	struct svc_fh		fh1;
-	struct svc_fh		fh2;
-};
-
 /*
  * Storage requirements for XDR arguments and results.
  */
@@ -382,14 +376,12 @@ union nfsd3_xdrstore {
 
 bool nfs3svc_decode_fhandleargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_decode_write3arg(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_decode_linkargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readdirargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
 bool nfs_svc_encode_readlink3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_encode_read3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_encode_linkres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_readdirres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_fsstatres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_fsinfores(struct svc_rqst *rqstp, struct xdr_stream *xdr);
@@ -397,7 +389,6 @@ bool nfs3svc_encode_pathconfres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_commitres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
 void nfs3svc_release_fhandle(struct svc_rqst *);
-void nfs3svc_release_fhandle2(struct svc_rqst *);
 
 void nfs3svc_encode_cookie3(struct nfsd3_readdirres *resp, u64 offset);
 int nfs3svc_encode_entry3(void *data, const char *name, int namlen,

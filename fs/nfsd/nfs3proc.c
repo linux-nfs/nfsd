@@ -1091,17 +1091,47 @@ out:
 	return rpc_success;
 }
 
+/**
+ * nfsd3_proc_link - NFSv3 LINK - Create Link to an object
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
+ */
 static __be32
 nfsd3_proc_link(struct svc_rqst *rqstp)
 {
 	struct nfsd3_linkargs *argp = rqstp->rq_argp;
-	struct nfsd3_linkres  *resp = rqstp->rq_resp;
+	struct diropargs3 *link = &argp->xdrgen.link;
+	struct nfsd3_linkres *resp = rqstp->rq_resp;
+	struct svc_fh *ffhp = &argp->ffh;
+	struct svc_fh *tfhp = &argp->tfh;
 
-	fh_copy(&resp->fh,  &argp->ffh);
-	fh_copy(&resp->tfh, &argp->tfh);
-	resp->status = nfsd_link(rqstp, &resp->tfh, argp->tname, argp->tlen,
-				 &resp->fh);
-	resp->status = nfsd3_map_status(resp->status);
+	nfsd3_fh3_to_svc_fh(ffhp, &argp->xdrgen.file);
+	nfsd3_fh3_to_svc_fh(tfhp, &link->dir);
+	resp->xdrgen.status = nfsd3_check_filename(link->name.data,
+						   link->name.len);
+	if (resp->xdrgen.status != nfs_ok)
+		goto out;
+
+	resp->xdrgen.status = nfsd_link(rqstp, tfhp, (char *)link->name.data,
+					link->name.len, ffhp);
+
+out:
+	if (resp->xdrgen.status == nfs_ok) {
+		struct LINK3resok *resok = &resp->xdrgen.u.resok;
+
+		nfsd3_fill_post_op_attr(rqstp, &resok->file_attributes, ffhp);
+		nfsd3_fill_wcc_data(rqstp, &resok->linkdir_wcc, tfhp);
+	} else {
+		struct LINK3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_post_op_attr(rqstp, &resfail->file_attributes, ffhp);
+		nfsd3_fill_wcc_data(rqstp, &resfail->linkdir_wcc, tfhp);
+	}
+
+	fh_put(ffhp);
+	fh_put(tfhp);
 	return rpc_success;
 }
 
@@ -1510,14 +1540,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_LINK] = {
 		.pc_func = nfsd3_proc_link,
-		.pc_decode = nfs3svc_decode_linkargs,
-		.pc_encode = nfs3svc_encode_linkres,
-		.pc_release = nfs3svc_release_fhandle2,
+		.pc_decode = nfs_svc_decode_LINK3args,
+		.pc_encode = nfs_svc_encode_LINK3res,
 		.pc_argsize = sizeof(struct nfsd3_linkargs),
-		.pc_argzero = sizeof(struct nfsd3_linkargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_linkres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+pAT+WC,
+		.pc_xdrressize = NFS3_LINK3res_sz,
 		.pc_name = "LINK",
 	},
 	[NFSPROC3_READDIR] = {
