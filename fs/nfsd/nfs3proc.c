@@ -1040,17 +1040,54 @@ out:
 	return rpc_success;
 }
 
+/**
+ * nfsd3_proc_rename - NFSv3 RENAME - Rename a file or directory
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
+ */
 static __be32
 nfsd3_proc_rename(struct svc_rqst *rqstp)
 {
 	struct nfsd3_renameargs *argp = rqstp->rq_argp;
 	struct nfsd3_renameres *resp = rqstp->rq_resp;
+	struct diropargs3 *from = &argp->xdrgen.from;
+	struct diropargs3 *to = &argp->xdrgen.to;
+	struct svc_fh *ffhp = &argp->ffh;
+	struct svc_fh *tfhp = &argp->tfh;
 
-	fh_copy(&resp->ffh, &argp->ffh);
-	fh_copy(&resp->tfh, &argp->tfh);
-	resp->status = nfsd_rename(rqstp, &resp->ffh, argp->fname, argp->flen,
-				   &resp->tfh, argp->tname, argp->tlen);
-	resp->status = nfsd3_map_status(resp->status);
+	nfsd3_fh3_to_svc_fh(ffhp, &from->dir);
+	nfsd3_fh3_to_svc_fh(tfhp, &to->dir);
+	resp->xdrgen.status = nfsd3_check_filename(from->name.data,
+						   from->name.len);
+	if (resp->xdrgen.status != nfs_ok)
+		goto out;
+	resp->xdrgen.status = nfsd3_check_filename(to->name.data,
+						   to->name.len);
+	if (resp->xdrgen.status != nfs_ok)
+		goto out;
+
+	resp->xdrgen.status = nfsd_rename(rqstp, ffhp, (char *)from->name.data,
+					  from->name.len, tfhp,
+					  (char *)to->name.data,
+					  to->name.len);
+
+out:
+	if (resp->xdrgen.status == nfs_ok) {
+		struct RENAME3resok *resok = &resp->xdrgen.u.resok;
+
+		nfsd3_fill_wcc_data(rqstp, &resok->fromdir_wcc, ffhp);
+		nfsd3_fill_wcc_data(rqstp, &resok->todir_wcc, tfhp);
+	} else {
+		struct RENAME3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resfail->fromdir_wcc, ffhp);
+		nfsd3_fill_wcc_data(rqstp, &resfail->todir_wcc, tfhp);
+	}
+
+	fh_put(ffhp);
+	fh_put(tfhp);
 	return rpc_success;
 }
 
@@ -1462,14 +1499,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_RENAME] = {
 		.pc_func = nfsd3_proc_rename,
-		.pc_decode = nfs3svc_decode_renameargs,
-		.pc_encode = nfs3svc_encode_renameres,
-		.pc_release = nfs3svc_release_fhandle2,
+		.pc_decode = nfs_svc_decode_RENAME3args,
+		.pc_encode = nfs_svc_encode_RENAME3res,
 		.pc_argsize = sizeof(struct nfsd3_renameargs),
-		.pc_argzero = sizeof(struct nfsd3_renameargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_renameres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+WC+WC,
+		.pc_xdrressize = NFS3_RENAME3res_sz,
 		.pc_name = "RENAME",
 	},
 	[NFSPROC3_LINK] = {
