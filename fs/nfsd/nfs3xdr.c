@@ -357,14 +357,6 @@ nfs3svc_decode_fhandleargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	return svcxdr_decode_nfs_fh3(xdr, &args->fh);
 }
 
-bool
-nfs3svc_decode_diropargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
-{
-	struct nfsd3_diropargs *args = rqstp->rq_argp;
-
-	return svcxdr_decode_diropargs3(xdr, &args->fh, &args->name, &args->len);
-}
-
 static bool
 svcxdr_decode_write_data(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
@@ -472,16 +464,6 @@ nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 /*
  * XDR encode functions
  */
-
-/* SETATTR, REMOVE, RMDIR */
-bool
-nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr)
-{
-	struct nfsd3_attrstat *resp = rqstp->rq_resp;
-
-	return svcxdr_encode_nfsstat3(xdr, resp->status) &&
-		svcxdr_encode_wcc_data(rqstp, xdr, &resp->fh);
-}
 
 static bool
 svcxdr_encode_nfspath3(struct svc_rqst *rqstp, struct xdr_stream *xdr,

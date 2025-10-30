@@ -1000,19 +1000,43 @@ out:
 	return rpc_success;
 }
 
-/*
- * Remove a directory
+/**
+ * nfsd3_proc_rmdir - NFSv3 RMDIR - Remove a directory
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_rmdir(struct svc_rqst *rqstp)
 {
-	struct nfsd3_diropargs *argp = rqstp->rq_argp;
-	struct nfsd3_attrstat *resp = rqstp->rq_resp;
+	struct nfsd3_rmdirargs *argp = rqstp->rq_argp;
+	struct diropargs3 *object = &argp->xdrgen.object;
+	struct nfsd3_rmdirres *resp = rqstp->rq_resp;
+	struct svc_fh *fhp = &argp->fh;
 
-	fh_copy(&resp->fh, &argp->fh);
-	resp->status = nfsd_unlink(rqstp, &resp->fh, S_IFDIR,
-				   argp->name, argp->len);
-	resp->status = nfsd3_map_status(resp->status);
+	nfsd3_fh3_to_svc_fh(fhp, &object->dir);
+	resp->xdrgen.status = nfsd3_check_filename(object->name.data,
+						   object->name.len);
+	if (resp->xdrgen.status != nfs_ok)
+		goto out;
+
+	resp->xdrgen.status = nfsd_unlink(rqstp, fhp, S_IFDIR,
+					  (char *)object->name.data,
+					  object->name.len);
+
+out:
+	if (resp->xdrgen.status == nfs_ok) {
+		struct RMDIR3resok *resok = &resp->xdrgen.u.resok;
+
+		nfsd3_fill_wcc_data(rqstp, &resok->dir_wcc, fhp);
+	} else {
+		struct RMDIR3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resfail->dir_wcc, fhp);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -1273,10 +1297,8 @@ out:
  * NFSv3 Server procedures.
  * Only the results of non-idempotent operations are cached.
  */
-#define nfs3svc_encode_wccstatres	nfs3svc_encode_wccstat
 #define nfsd3_readdirplusargs		nfsd3_readdirargs
 #define nfsd3_fhandleargs		nfsd_fhandle
-#define nfsd3_wccstatres		nfsd3_attrstat
 
 #define ST 1		/* status*/
 #define AT 21		/* attributes */
@@ -1429,14 +1451,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_RMDIR] = {
 		.pc_func = nfsd3_proc_rmdir,
-		.pc_decode = nfs3svc_decode_diropargs,
-		.pc_encode = nfs3svc_encode_wccstatres,
-		.pc_release = nfs3svc_release_fhandle,
-		.pc_argsize = sizeof(struct nfsd3_diropargs),
-		.pc_argzero = sizeof(struct nfsd3_diropargs),
-		.pc_ressize = sizeof(struct nfsd3_wccstatres),
+		.pc_decode = nfs_svc_decode_RMDIR3args,
+		.pc_encode = nfs_svc_encode_RMDIR3res,
+		.pc_argsize = sizeof(struct nfsd3_rmdirargs),
+		.pc_argzero = 0,
+		.pc_ressize = sizeof(struct nfsd3_rmdirres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+WC,
+		.pc_xdrressize = NFS3_RMDIR3res_sz,
 		.pc_name = "RMDIR",
 	},
 	[NFSPROC3_RENAME] = {
