@@ -52,9 +52,6 @@ bool nfsd_support_version(int vers);
 #define NFS3_POST_OP_ATTR_WORDS		NFS3_post_op_attr_sz
 #define NFS3_ACCESS_FULL		0x003f
 
-#define NFS3_FSF_DEFAULT		0x001b
-#define NFS3_FSF_BILLYBOY		0x0018
-
 /*
  * Default and maximum payload size (NFS READ or WRITE), in bytes.
  * The default is historical, and the maximum is an implementation

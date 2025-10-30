@@ -142,6 +142,13 @@ struct nfsd3_fsstatargs {
 
 static_assert(offsetof(struct nfsd3_fsstatargs, xdrgen) == 0);
 
+struct nfsd3_fsinfoargs {
+	struct FSINFO3args	xdrgen;
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_fsinfoargs, xdrgen) == 0);
+
 struct nfsd3_commitargs {
 	struct svc_fh		fh;
 	__u64			offset;
@@ -299,17 +306,10 @@ struct nfsd3_fsstatres {
 static_assert(offsetof(struct nfsd3_fsstatres, xdrgen) == 0);
 
 struct nfsd3_fsinfores {
-	__be32			status;
-	__u32			f_rtmax;
-	__u32			f_rtpref;
-	__u32			f_rtmult;
-	__u32			f_wtmax;
-	__u32			f_wtpref;
-	__u32			f_wtmult;
-	__u32			f_dtpref;
-	__u64			f_maxfilesize;
-	__u32			f_properties;
+	struct FSINFO3res	xdrgen;
 };
+
+static_assert(offsetof(struct nfsd3_fsinfores, xdrgen) == 0);
 
 struct nfsd3_pathconfres {
 	__be32			status;
@@ -357,6 +357,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_linkargs		linkargs;
 	struct nfsd3_readdirargs	readdirargs;
 	struct nfsd3_fsstatargs		fsstatargs;
+	struct nfsd3_fsinfoargs		fsinfoargs;
 
 	struct nfsd3_getattrres		getattrres;
 	struct nfsd3_setattrres		setattrres;
@@ -392,7 +393,6 @@ bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_encode_readlink3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_encode_read3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_readdirres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_encode_fsinfores(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_pathconfres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_commitres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
