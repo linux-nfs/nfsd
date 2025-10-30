@@ -1327,46 +1327,54 @@ nfsd3_proc_fsinfo(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Get pathconf info for the specified file
+/**
+ * nfsd3_proc_pathconf - NFSv3 PATHCONF - Retrieve POSIX information
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_pathconf(struct svc_rqst *rqstp)
 {
-	struct nfsd_fhandle *argp = rqstp->rq_argp;
+	struct nfsd3_pathconfargs *argp = rqstp->rq_argp;
 	struct nfsd3_pathconfres *resp = rqstp->rq_resp;
+	struct svc_fh *fhp = &argp->fh;
 
-	dprintk("nfsd: PATHCONF(3) %s\n",
-				SVCFH_fmt(&argp->fh));
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.object);
 
-	/* Set default pathconf */
-	resp->p_link_max = 255;		/* at least */
-	resp->p_name_max = 255;		/* at least */
-	resp->p_no_trunc = 0;
-	resp->p_chown_restricted = 1;
-	resp->p_case_insensitive = 0;
-	resp->p_case_preserving = 1;
+	resp->xdrgen.status = fh_verify(rqstp, fhp, 0, NFSD_MAY_NOP);
 
-	resp->status = fh_verify(rqstp, &argp->fh, 0, NFSD_MAY_NOP);
+	if (resp->xdrgen.status == nfs_ok) {
+		struct PATHCONF3resok *resok = &resp->xdrgen.u.resok;
+		struct super_block *sb = fhp->fh_dentry->d_sb;
 
-	if (resp->status == nfs_ok) {
-		struct super_block *sb = argp->fh.fh_dentry->d_sb;
+		resok->obj_attributes.attributes_follow = false;
+		resok->linkmax = sb->s_max_links ? sb->s_max_links : LINK_MAX;
+		resok->name_max = NAME_MAX;
+		resok->no_trunc = false;
+		resok->chown_restricted = true;
+		resok->case_insensitive = false;
+		resok->case_preserving = true;
 
 		/* Note that we don't care for remote fs's here */
 		switch (sb->s_magic) {
 		case EXT2_SUPER_MAGIC:
-			resp->p_link_max = EXT2_LINK_MAX;
-			resp->p_name_max = EXT2_NAME_LEN;
+			resok->linkmax = EXT2_LINK_MAX;
+			resok->name_max = EXT2_NAME_LEN;
 			break;
 		case MSDOS_SUPER_MAGIC:
-			resp->p_case_insensitive = 1;
-			resp->p_case_preserving  = 0;
+			resok->case_insensitive = true;
+			resok->case_preserving = false;
 			break;
 		}
+	} else {
+		struct PATHCONF3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		resfail->obj_attributes.attributes_follow = false;
 	}
 
-	fh_put(&argp->fh);
-	resp->status = nfsd3_map_status(resp->status);
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -1404,7 +1412,6 @@ out:
  * Only the results of non-idempotent operations are cached.
  */
 #define nfsd3_readdirplusargs		nfsd3_readdirargs
-#define nfsd3_fhandleargs		nfsd_fhandle
 
 #define ST 1		/* status*/
 #define AT 21		/* attributes */
@@ -1634,13 +1641,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_PATHCONF] = {
 		.pc_func = nfsd3_proc_pathconf,
-		.pc_decode = nfs3svc_decode_fhandleargs,
-		.pc_encode = nfs3svc_encode_pathconfres,
-		.pc_argsize = sizeof(struct nfsd3_fhandleargs),
-		.pc_argzero = sizeof(struct nfsd3_fhandleargs),
+		.pc_decode = nfs_svc_decode_PATHCONF3args,
+		.pc_encode = nfs_svc_encode_PATHCONF3res,
+		.pc_argsize = sizeof(struct nfsd3_pathconfargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_pathconfres),
 		.pc_cachetype = RC_NOCACHE,
-		.pc_xdrressize = ST+pAT+6,
+		.pc_xdrressize = NFS3_PATHCONF3res_sz,
 		.pc_name = "PATHCONF",
 	},
 	[NFSPROC3_COMMIT] = {
