@@ -497,34 +497,54 @@ nfsd3_proc_read(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Write data to a file
+/**
+ * nfsd3_proc_write - NFSv3 WRITE - Write to file
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_write(struct svc_rqst *rqstp)
 {
 	struct nfsd3_writeargs *argp = rqstp->rq_argp;
 	struct nfsd3_writeres *resp = rqstp->rq_resp;
-	unsigned long cnt = argp->len;
+	struct svc_fh *fhp = &argp->fh;
+	unsigned long count;
 
-	dprintk("nfsd: WRITE(3)    %s %d bytes at %Lu%s\n",
-				SVCFH_fmt(&argp->fh),
-				argp->len,
-				(unsigned long long) argp->offset,
-				argp->stable ? " stable" : "");
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.file);
+	if (argp->xdrgen.count != argp->xdrgen.data.len) {
+		resp->xdrgen.status = nfserr_inval;
+		goto out;
+	}
+	count = argp->xdrgen.count;
+	if (argp->xdrgen.offset > (u64)OFFSET_MAX ||
+	    argp->xdrgen.offset + count > (u64)OFFSET_MAX) {
+		resp->xdrgen.status = nfserr_fbig;
+		goto out;
+	}
 
-	resp->status = nfserr_fbig;
-	if (argp->offset > (u64)OFFSET_MAX ||
-	    argp->offset + argp->len > (u64)OFFSET_MAX)
-		return rpc_success;
+	resp->xdrgen.status = nfsd_write(rqstp, fhp, argp->xdrgen.offset,
+					 &argp->payload, &count,
+					 argp->xdrgen.stable,
+					 (__be32 *)resp->xdrgen.u.resok.verf);
 
-	fh_copy(&resp->fh, &argp->fh);
-	resp->committed = argp->stable;
-	resp->status = nfsd_write(rqstp, &resp->fh, argp->offset,
-				  &argp->payload, &cnt,
-				  resp->committed, resp->verf);
-	resp->count = cnt;
-	resp->status = nfsd3_map_status(resp->status);
+out:
+	if (resp->xdrgen.status == nfs_ok) {
+		struct WRITE3resok *resok = &resp->xdrgen.u.resok;
+
+		resok->count = count;
+		resok->committed = argp->xdrgen.stable;
+		nfsd3_fill_wcc_data(rqstp, &resok->file_wcc, fhp);
+		nfsd3_fill_post_op_attr(rqstp, &resok->file_wcc.after, fhp);
+	} else {
+		struct WRITE3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_wcc_data(rqstp, &resfail->file_wcc, fhp);
+		nfsd3_fill_post_op_attr(rqstp, &resfail->file_wcc.after, fhp);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -1151,14 +1171,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_WRITE] = {
 		.pc_func = nfsd3_proc_write,
-		.pc_decode = nfs3svc_decode_writeargs,
-		.pc_encode = nfs3svc_encode_writeres,
-		.pc_release = nfs3svc_release_fhandle,
+		.pc_decode = nfs_svc_decode_write3arg,
+		.pc_encode = nfs_svc_encode_WRITE3res,
 		.pc_argsize = sizeof(struct nfsd3_writeargs),
-		.pc_argzero = sizeof(struct nfsd3_writeargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_writeres),
 		.pc_cachetype = RC_REPLBUFF,
-		.pc_xdrressize = ST+WC+4,
+		.pc_xdrressize = NFS3_WRITE3res_sz,
 		.pc_name = "WRITE",
 	},
 	[NFSPROC3_CREATE] = {

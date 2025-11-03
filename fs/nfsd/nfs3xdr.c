@@ -487,34 +487,32 @@ nfs3svc_decode_diropargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 	return svcxdr_decode_diropargs3(xdr, &args->fh, &args->name, &args->len);
 }
 
-bool
-nfs3svc_decode_writeargs(struct svc_rqst *rqstp, struct xdr_stream *xdr)
+static bool
+svcxdr_decode_write_data(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 {
-	struct nfsd3_writeargs *args = rqstp->rq_argp;
-	u32 max_blocksize = svc_max_payload(rqstp);
+	struct nfsd3_writeargs *argp = rqstp->rq_argp;
 
-	if (!svcxdr_decode_nfs_fh3(xdr, &args->fh))
+	if (xdr_stream_decode_u32(xdr, &argp->xdrgen.data.len) < 0)
 		return false;
-	if (xdr_stream_decode_u64(xdr, &args->offset) < 0)
-		return false;
-	if (xdr_stream_decode_u32(xdr, &args->count) < 0)
-		return false;
-	if (xdr_stream_decode_u32(xdr, &args->stable) < 0)
-		return false;
+	return xdr_stream_subsegment(xdr, &argp->payload, argp->xdrgen.data.len);
+}
 
-	/* opaque data */
-	if (xdr_stream_decode_u32(xdr, &args->len) < 0)
-		return false;
+bool
+nfs_svc_decode_write3arg(struct svc_rqst *rqstp, struct xdr_stream *xdr)
+{
+	struct WRITE3args *argp = rqstp->rq_argp;
 
-	/* request sanity */
-	if (args->count != args->len)
+	if (!xdrgen_decode_nfs_fh3(xdr, &argp->file))
 		return false;
-	if (args->count > max_blocksize) {
-		args->count = max_blocksize;
-		args->len = max_blocksize;
-	}
-
-	return xdr_stream_subsegment(xdr, &args->payload, args->count);
+	if (!xdrgen_decode_offset3(xdr, &argp->offset))
+		return false;
+	if (!xdrgen_decode_count3(xdr, &argp->count))
+		return false;
+	if (!xdrgen_decode_stable_how(xdr, &argp->stable))
+		return false;
+	if (!svcxdr_decode_write_data(rqstp, xdr))
+		return false;
+	return true;
 }
 
 bool
@@ -783,33 +781,6 @@ nfs_svc_encode_read3res(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		if (!xdrgen_encode_READ3resfail(xdr, &resp->u.resfail))
 			return false;
 	}
-	return true;
-}
-
-/* WRITE */
-bool
-nfs3svc_encode_writeres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
-{
-	struct nfsd3_writeres *resp = rqstp->rq_resp;
-
-	if (!svcxdr_encode_nfsstat3(xdr, resp->status))
-		return false;
-	switch (resp->status) {
-	case nfs_ok:
-		if (!svcxdr_encode_wcc_data(rqstp, xdr, &resp->fh))
-			return false;
-		if (xdr_stream_encode_u32(xdr, resp->count) < 0)
-			return false;
-		if (xdr_stream_encode_u32(xdr, resp->committed) < 0)
-			return false;
-		if (!svcxdr_encode_writeverf3(xdr, resp->verf))
-			return false;
-		break;
-	default:
-		if (!svcxdr_encode_wcc_data(rqstp, xdr, &resp->fh))
-			return false;
-	}
-
 	return true;
 }
 

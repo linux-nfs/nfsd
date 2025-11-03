@@ -64,6 +64,7 @@ typedef uint64 offset3;
 typedef uint32 mode3;
 typedef uint32 count3;
 
+pragma public offset3;
 pragma public count3;
 
 enum nfsstat3 {
@@ -118,6 +119,7 @@ struct specdata3 {
 struct nfs_fh3 {
 	opaque		data<NFS3_FHSIZE>;
 };
+pragma public nfs_fh3;
 
 struct nfstime3 {
 	uint32		seconds;
@@ -378,6 +380,7 @@ enum stable_how {
 	DATA_SYNC	= 1,
 	FILE_SYNC	= 2
 };
+pragma public stable_how;
 
 struct WRITE3args {
 	nfs_fh3		file;
