@@ -64,6 +64,8 @@ typedef uint64 offset3;
 typedef uint32 mode3;
 typedef uint32 count3;
 
+pragma public count3;
+
 enum nfsstat3 {
 	NFS3_OK			= 0,
 	NFS3ERR_PERM		= 1,
@@ -362,6 +364,7 @@ struct READ3resok {
 struct READ3resfail {
 	post_op_attr	file_attributes;
 };
+pragma public READ3resfail;
 
 union READ3res switch (nfsstat3 status) {
 	case NFS3_OK:
