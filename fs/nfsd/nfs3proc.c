@@ -408,24 +408,41 @@ nfsd3_proc_access(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Read a symlink.
+/**
+ * nfsd3_proc_readlink - NFSv3 READLINK - Read from symbolic link
+ * @rqstp: RPC transaction context
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_readlink(struct svc_rqst *rqstp)
 {
-	struct nfsd_fhandle *argp = rqstp->rq_argp;
+	struct nfsd3_readlinkargs *argp = rqstp->rq_argp;
 	struct nfsd3_readlinkres *resp = rqstp->rq_resp;
+	struct svc_fh *fhp = &argp->fh;
+	u32 len;
 
-	dprintk("nfsd: READLINK(3) %s\n", SVCFH_fmt(&argp->fh));
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.symlink);
 
-	/* Read the symlink. */
-	fh_copy(&resp->fh, &argp->fh);
-	resp->len = NFS3_MAXPATHLEN;
+	len = NFS3_MAXPATHLEN;
 	resp->pages = rqstp->rq_next_page++;
-	resp->status = nfsd_readlink(rqstp, &resp->fh,
-				     page_address(*resp->pages), &resp->len);
-	resp->status = nfsd3_map_status(resp->status);
+	resp->xdrgen.status = nfsd_readlink(rqstp, fhp,
+					    page_address(*resp->pages), &len);
+
+	if (resp->xdrgen.status == nfs_ok) {
+		struct READLINK3resok *resok = &resp->xdrgen.u.resok;
+
+		resok->data.len = len;
+		nfsd3_fill_post_op_attr(rqstp, &resok->symlink_attributes, fhp);
+	} else {
+		struct READLINK3resfail *resfail = &resp->xdrgen.u.resfail;
+
+		resp->xdrgen.status = nfsd3_map_status(resp->xdrgen.status);
+		nfsd3_fill_post_op_attr(rqstp, &resfail->symlink_attributes,
+					fhp);
+	}
+
+	fh_put(fhp);
 	return rpc_success;
 }
 
@@ -1099,14 +1116,13 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_READLINK] = {
 		.pc_func = nfsd3_proc_readlink,
-		.pc_decode = nfs3svc_decode_fhandleargs,
-		.pc_encode = nfs3svc_encode_readlinkres,
-		.pc_release = nfs3svc_release_fhandle,
-		.pc_argsize = sizeof(struct nfsd_fhandle),
-		.pc_argzero = sizeof(struct nfsd_fhandle),
+		.pc_decode = nfs_svc_decode_READLINK3args,
+		.pc_encode = nfs_svc_encode_readlink3res,
+		.pc_argsize = sizeof(struct nfsd3_readlinkargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_readlinkres),
 		.pc_cachetype = RC_NOCACHE,
-		.pc_xdrressize = ST+pAT+1+NFS3_MAXPATHLEN/4,
+		.pc_xdrressize = NFS3_READLINK3res_sz,
 		.pc_name = "READLINK",
 	},
 	[NFSPROC3_READ] = {

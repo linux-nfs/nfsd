@@ -703,31 +703,50 @@ nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr)
 		svcxdr_encode_wcc_data(rqstp, xdr, &resp->fh);
 }
 
-/* READLINK */
-bool
-nfs3svc_encode_readlinkres(struct svc_rqst *rqstp, struct xdr_stream *xdr)
+static bool
+svcxdr_encode_nfspath3(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+		       const struct READLINK3resok *value)
 {
 	struct nfsd3_readlinkres *resp = rqstp->rq_resp;
 	struct kvec *head = rqstp->rq_res.head;
+	u32 len = value->data.len;
 
-	if (!svcxdr_encode_nfsstat3(xdr, resp->status))
+	if (xdr_stream_encode_u32(xdr, len) < 0)
+		return false;
+	svcxdr_encode_opaque_pages(rqstp, xdr, resp->pages, 0, len);
+	if (svc_encode_result_payload(rqstp, head->iov_len, len) < 0)
+		return false;
+	return true;
+}
+
+static bool
+svcxdr_encode_readlink3resok(struct svc_rqst *rqstp, struct xdr_stream *xdr,
+			     const struct READLINK3resok *value)
+{
+	if (!xdrgen_encode_post_op_attr(xdr, &value->symlink_attributes))
+		return false;
+	if (!svcxdr_encode_nfspath3(rqstp, xdr, value))
+		return false;
+	return true;
+}
+
+/* READLINK */
+bool
+nfs_svc_encode_readlink3res(struct svc_rqst *rqstp, struct xdr_stream *xdr)
+{
+	struct READLINK3res *resp = rqstp->rq_resp;
+
+	if (!xdrgen_encode_nfsstat3(xdr, resp->status))
 		return false;
 	switch (resp->status) {
 	case nfs_ok:
-		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
-			return false;
-		if (xdr_stream_encode_u32(xdr, resp->len) < 0)
-			return false;
-		svcxdr_encode_opaque_pages(rqstp, xdr, resp->pages, 0,
-					   resp->len);
-		if (svc_encode_result_payload(rqstp, head->iov_len, resp->len) < 0)
+		if (!svcxdr_encode_readlink3resok(rqstp, xdr, &resp->u.resok))
 			return false;
 		break;
 	default:
-		if (!svcxdr_encode_post_op_attr(rqstp, xdr, &resp->fh))
+		if (!xdrgen_encode_READLINK3resfail(xdr, &resp->u.resfail))
 			return false;
 	}
-
 	return true;
 }
 

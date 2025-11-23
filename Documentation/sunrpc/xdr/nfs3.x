@@ -96,6 +96,7 @@ enum nfsstat3 {
 	NFS3ERR_JUKEBOX		= 10008
 };
 pragma big_endian nfsstat3;
+pragma public nfsstat3;
 
 enum ftype3 {
 	NF3REG		= 1,
@@ -143,6 +144,7 @@ union post_op_attr switch (bool attributes_follow) {
 	case FALSE:
 		void;
 };
+pragma public post_op_attr;
 
 struct wcc_attr {
 	size3		size;
@@ -335,6 +337,7 @@ struct READLINK3resok {
 struct READLINK3resfail {
 	post_op_attr	symlink_attributes;
 };
+pragma public READLINK3resfail;
 
 union READLINK3res switch (nfsstat3 status) {
 	case NFS3_OK:

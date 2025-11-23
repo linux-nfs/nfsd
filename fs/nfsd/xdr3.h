@@ -50,6 +50,13 @@ struct nfsd3_accessargs {
 
 static_assert(offsetof(struct nfsd3_accessargs, xdrgen) == 0);
 
+struct nfsd3_readlinkargs {
+	struct READLINK3args	xdrgen;
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_readlinkargs, xdrgen) == 0);
+
 struct nfsd3_readargs {
 	struct svc_fh		fh;
 	__u64			offset;
@@ -181,11 +188,11 @@ struct nfsd3_accessres {
 static_assert(offsetof(struct nfsd3_accessres, xdrgen) == 0);
 
 struct nfsd3_readlinkres {
-	__be32			status;
-	struct svc_fh		fh;
-	__u32			len;
+	struct READLINK3res	xdrgen;
 	struct page		**pages;
 };
+
+static_assert(offsetof(struct nfsd3_readlinkres, xdrgen) == 0);
 
 struct nfsd3_readres {
 	__be32			status;
@@ -290,6 +297,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_setattrargs	setattrargs;
 	struct nfsd3_lookupargs		lookupargs;
 	struct nfsd3_accessargs		accessargs;
+	struct nfsd3_readlinkargs	readlinkargs;
 	struct nfsd3_diropargs		diropargs;
 	struct nfsd3_readargs		readargs;
 	struct nfsd3_writeargs		writeargs;
@@ -334,7 +342,7 @@ bool nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *x
 bool nfs3svc_decode_commitargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
 bool nfs3svc_encode_wccstat(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_encode_readlinkres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
+bool nfs_svc_encode_readlink3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_readres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_writeres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs3svc_encode_createres(struct svc_rqst *rqstp, struct xdr_stream *xdr);
