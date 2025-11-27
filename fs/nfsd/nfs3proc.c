@@ -1192,26 +1192,33 @@ nfsd3_proc_readdir(struct svc_rqst *rqstp)
 	return rpc_success;
 }
 
-/*
- * Read a portion of a directory, including file handles and attrs.
- * For now, we choose to ignore the dircount parameter.
+/**
+ * nfsd3_proc_readdirplus - NFSv3 READDIRPLUS - Extended read from directory
+ * @rqstp: RPC transaction context
+ *
+ * This implementation ignores the dircount argument.
+ *
+ * Returns an RPC accept_stat value in network byte order.
  */
 static __be32
 nfsd3_proc_readdirplus(struct svc_rqst *rqstp)
 {
-	struct nfsd3_readdirargs *argp = rqstp->rq_argp;
+	struct nfsd3_readdirplusargs *argp = rqstp->rq_argp;
 	struct nfsd3_readdirres  *resp = rqstp->rq_resp;
+	struct svc_fh *fhp = &argp->fh;
 	loff_t	offset;
 
-	trace_nfsd_vfs_readdir(rqstp, &argp->fh, argp->count, argp->cookie);
+	nfsd3_fh3_to_svc_fh(fhp, &argp->xdrgen.dir);
+	trace_nfsd_vfs_readdir(rqstp, fhp, argp->xdrgen.maxcount,
+			       argp->xdrgen.cookie);
 
-	nfsd3_init_dirlist_pages(rqstp, resp, argp->count);
+	nfsd3_init_dirlist_pages(rqstp, resp, argp->xdrgen.maxcount);
 
-	fh_copy(&resp->fh, &argp->fh);
+	fh_copy(&resp->fh, fhp);
 	resp->common.err = nfs_ok;
 	resp->cookie_offset = 0;
 	resp->rqstp = rqstp;
-	offset = argp->cookie;
+	offset = argp->xdrgen.cookie;
 
 	resp->status = fh_verify(rqstp, &resp->fh, S_IFDIR, NFSD_MAY_NOP);
 	if (resp->status != nfs_ok)
@@ -1224,7 +1231,7 @@ nfsd3_proc_readdirplus(struct svc_rqst *rqstp)
 
 	resp->status = nfsd_readdir(rqstp, &resp->fh, &offset,
 				    &resp->common, nfs3svc_encode_entryplus3);
-	memcpy(resp->verf, argp->verf, 8);
+	memcpy(resp->verf, argp->xdrgen.cookieverf, NFS3_COOKIEVERFSIZE);
 	nfs3svc_encode_cookie3(resp, offset);
 
 	/* Recycle only pages that were part of the reply */
@@ -1432,8 +1439,6 @@ out:
  * NFSv3 Server procedures.
  * Only the results of non-idempotent operations are cached.
  */
-#define nfsd3_readdirplusargs		nfsd3_readdirargs
-
 static const struct svc_procedure nfsd_procedures3[22] = {
 	[NFSPROC3_NULL] = {
 		.pc_func = nfsd3_proc_null,
@@ -1624,11 +1629,11 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 	},
 	[NFSPROC3_READDIRPLUS] = {
 		.pc_func = nfsd3_proc_readdirplus,
-		.pc_decode = nfs3svc_decode_readdirplusargs,
+		.pc_decode = nfs_svc_decode_READDIRPLUS3args,
 		.pc_encode = nfs3svc_encode_readdirres,
 		.pc_release = nfs3svc_release_fhandle,
 		.pc_argsize = sizeof(struct nfsd3_readdirplusargs),
-		.pc_argzero = sizeof(struct nfsd3_readdirplusargs),
+		.pc_argzero = 0,
 		.pc_ressize = sizeof(struct nfsd3_readdirres),
 		.pc_cachetype = RC_NOCACHE,
 		.pc_name = "READDIRPLUS",

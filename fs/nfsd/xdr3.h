@@ -131,12 +131,16 @@ static_assert(offsetof(struct nfsd3_linkargs, xdrgen) == 0);
 struct nfsd3_readdirargs {
 	struct READDIR3args	xdrgen;
 	struct svc_fh		fh;
-	__u64			cookie;
-	__u32			count;
-	__be32 *		verf;
 };
 
 static_assert(offsetof(struct nfsd3_readdirargs, xdrgen) == 0);
+
+struct nfsd3_readdirplusargs {
+	struct READDIRPLUS3args	xdrgen;
+	struct svc_fh		fh;
+};
+
+static_assert(offsetof(struct nfsd3_readdirplusargs, xdrgen) == 0);
 
 struct nfsd3_fsstatargs {
 	struct FSSTAT3args	xdrgen;
@@ -363,6 +367,7 @@ union nfsd3_xdrstore {
 	struct nfsd3_renameargs		renameargs;
 	struct nfsd3_linkargs		linkargs;
 	struct nfsd3_readdirargs	readdirargs;
+	struct nfsd3_readdirplusargs	readdirplusargs;
 	struct nfsd3_fsstatargs		fsstatargs;
 	struct nfsd3_fsinfoargs		fsinfoargs;
 	struct nfsd3_pathconfargs	pathconfargs;
@@ -394,7 +399,6 @@ union nfsd3_xdrstore {
 #define NFS3_SVC_XDRSIZE		sizeof(union nfsd3_xdrstore)
 
 bool nfs_svc_decode_write3arg(struct svc_rqst *rqstp, struct xdr_stream *xdr);
-bool nfs3svc_decode_readdirplusargs(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 
 bool nfs_svc_encode_readlink3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
 bool nfs_svc_encode_read3res(struct svc_rqst *rqstp, struct xdr_stream *xdr);
