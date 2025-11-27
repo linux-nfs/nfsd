@@ -780,7 +780,6 @@ out:
 #define nfsd3_fhandleargs		nfsd_fhandle
 #define nfsd3_attrstatres		nfsd3_attrstat
 #define nfsd3_wccstatres		nfsd3_attrstat
-#define nfsd3_createres			nfsd3_diropres
 
 #define ST 1		/* status*/
 #define FH 17		/* filehandle with length */
@@ -891,7 +890,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_release = nfs3svc_release_fhandle2,
 		.pc_argsize = sizeof(struct nfsd3_createargs),
 		.pc_argzero = sizeof(struct nfsd3_createargs),
-		.pc_ressize = sizeof(struct nfsd3_createres),
+		.pc_ressize = sizeof(struct nfsd3_diropres),
 		.pc_cachetype = RC_REPLBUFF,
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "CREATE",
@@ -903,7 +902,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_release = nfs3svc_release_fhandle2,
 		.pc_argsize = sizeof(struct nfsd3_mkdirargs),
 		.pc_argzero = sizeof(struct nfsd3_mkdirargs),
-		.pc_ressize = sizeof(struct nfsd3_createres),
+		.pc_ressize = sizeof(struct nfsd3_diropres),
 		.pc_cachetype = RC_REPLBUFF,
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "MKDIR",
@@ -915,7 +914,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_release = nfs3svc_release_fhandle2,
 		.pc_argsize = sizeof(struct nfsd3_symlinkargs),
 		.pc_argzero = sizeof(struct nfsd3_symlinkargs),
-		.pc_ressize = sizeof(struct nfsd3_createres),
+		.pc_ressize = sizeof(struct nfsd3_diropres),
 		.pc_cachetype = RC_REPLBUFF,
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "SYMLINK",
@@ -927,7 +926,7 @@ static const struct svc_procedure nfsd_procedures3[22] = {
 		.pc_release = nfs3svc_release_fhandle2,
 		.pc_argsize = sizeof(struct nfsd3_mknodargs),
 		.pc_argzero = sizeof(struct nfsd3_mknodargs),
-		.pc_ressize = sizeof(struct nfsd3_createres),
+		.pc_ressize = sizeof(struct nfsd3_diropres),
 		.pc_cachetype = RC_REPLBUFF,
 		.pc_xdrressize = ST+(1+FH+pAT)+WC,
 		.pc_name = "MKNOD",
