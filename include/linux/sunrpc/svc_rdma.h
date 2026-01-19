@@ -128,7 +128,6 @@ struct svcxprt_rdma {
 
 	/* Receive path */
 	u32		     sc_pending_recvs ____cacheline_aligned_in_smp;
-	u32		     sc_recv_batch;
 	struct llist_head    sc_rq_dto_q;
 	struct llist_head    sc_read_complete_q;
 
@@ -161,6 +160,28 @@ enum {
 	RPCRDMA_LISTEN_BACKLOG	= 10,
 	RPCRDMA_MAX_REQUESTS	= 128,
 	RPCRDMA_MAX_BC_REQUESTS	= 2,
+};
+
+/*
+ * Receive Queue provisioning constants for watermark-based replenishment.
+ *
+ * Queue depth is twice the credit limit to support batched
+ * posting that reduces doorbell overhead. When posted receives
+ * drop below the credit limit (the low watermark),
+ * svc_rdma_wc_receive() posts enough Receives to refill the
+ * queue to capacity.
+ */
+enum {
+	/* Queue depth = sc_max_requests * multiplier */
+	SVCRDMA_RQ_DEPTH_MULT		= 2,
+
+	/* Total recv_ctxt pool = sc_max_requests * multiplier
+	 * (RQ_DEPTH_MULT for posted receives + 1 for RPCs in process)
+	 */
+	SVCRDMA_RECV_CTXT_MULT		= SVCRDMA_RQ_DEPTH_MULT + 1,
+
+	/* rdma_rw contexts per request: Read + Write + Reply chunks */
+	SVCRDMA_RW_CTXT_MULT		= 3,
 };
 
 #define RPCSVC_MAXPAYLOAD_RDMA	RPCSVC_MAXPAYLOAD

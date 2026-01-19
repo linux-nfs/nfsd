@@ -303,10 +303,11 @@ bool svc_rdma_post_recvs(struct svcxprt_rdma *rdma)
 {
 	unsigned int total;
 
-	/* For each credit, allocate enough recv_ctxts for one
-	 * posted Receive and one RPC in process.
+	/* Allocate enough recv_ctxts for:
+	 * - SVCRDMA_RQ_DEPTH_MULT * sc_max_requests posted on the RQ
+	 * - sc_max_requests RPCs in process
 	 */
-	total = (rdma->sc_max_requests * 2) + rdma->sc_recv_batch;
+	total = rdma->sc_max_requests * SVCRDMA_RECV_CTXT_MULT;
 	while (total--) {
 		struct svc_rdma_recv_ctxt *ctxt;
 
@@ -316,7 +317,8 @@ bool svc_rdma_post_recvs(struct svcxprt_rdma *rdma)
 		llist_add(&ctxt->rc_node, &rdma->sc_recv_ctxts);
 	}
 
-	return svc_rdma_refresh_recvs(rdma, rdma->sc_max_requests);
+	return svc_rdma_refresh_recvs(rdma,
+				rdma->sc_max_requests * SVCRDMA_RQ_DEPTH_MULT);
 }
 
 /**
@@ -340,18 +342,30 @@ static void svc_rdma_wc_receive(struct ib_cq *cq, struct ib_wc *wc)
 		goto flushed;
 	trace_svcrdma_wc_recv(wc, &ctxt->rc_cid);
 
-	/* If receive posting fails, the connection is about to be
-	 * lost anyway. The server will not be able to send a reply
-	 * for this RPC, and the client will retransmit this RPC
-	 * anyway when it reconnects.
+	/* Watermark-based receive posting: The Receive Queue is
+	 * provisioned at SVCRDMA_RQ_DEPTH_MULT times the credit
+	 * count (sc_max_requests). When posted Receives drop below
+	 * sc_max_requests (the low watermark), this handler posts
+	 * enough Receives to refill the queue to capacity.
 	 *
-	 * Therefore we drop the Receive, even if status was SUCCESS
-	 * to reduce the likelihood of replayed requests once the
-	 * client reconnects.
+	 * Batched posting reduces doorbell rate compared to posting
+	 * a fixed small batch on every completion, while keeping
+	 * the Receive Queue populated.
+	 *
+	 * If posting fails, connection teardown is imminent. No
+	 * reply can be sent for this RPC, and the client will
+	 * retransmit after reconnecting. Drop the Receive, even
+	 * if status was SUCCESS, to reduce replay likelihood after
+	 * reconnection.
 	 */
-	if (rdma->sc_pending_recvs < rdma->sc_max_requests)
-		if (!svc_rdma_refresh_recvs(rdma, rdma->sc_recv_batch))
+	if (rdma->sc_pending_recvs < rdma->sc_max_requests) {
+		unsigned int target =
+			(rdma->sc_max_requests * SVCRDMA_RQ_DEPTH_MULT) -
+			rdma->sc_pending_recvs;
+
+		if (!svc_rdma_refresh_recvs(rdma, target))
 			goto dropped;
+	}
 
 	/* All wc fields are now known to be valid */
 	ctxt->rc_byte_len = wc->byte_len;

@@ -439,7 +439,6 @@ static struct svc_xprt *svc_rdma_accept(struct svc_xprt *xprt)
 	newxprt->sc_max_req_size = svcrdma_max_req_size;
 	newxprt->sc_max_requests = svcrdma_max_requests;
 	newxprt->sc_max_bc_requests = svcrdma_max_bc_requests;
-	newxprt->sc_recv_batch = RPCRDMA_MAX_RECV_BATCH;
 	newxprt->sc_fc_credits = cpu_to_be32(newxprt->sc_max_requests);
 
 	/* Qualify the transport's resource defaults with the
@@ -452,12 +451,14 @@ static struct svc_xprt *svc_rdma_accept(struct svc_xprt *xprt)
 	newxprt->sc_max_send_sges += (svcrdma_max_req_size / PAGE_SIZE) + 1;
 	if (newxprt->sc_max_send_sges > dev->attrs.max_send_sge)
 		newxprt->sc_max_send_sges = dev->attrs.max_send_sge;
-	rq_depth = newxprt->sc_max_requests + newxprt->sc_max_bc_requests +
-		   newxprt->sc_recv_batch + 1 /* drain */;
+	rq_depth = (newxprt->sc_max_requests * SVCRDMA_RQ_DEPTH_MULT) +
+		   newxprt->sc_max_bc_requests + 1 /* drain */;
 	if (rq_depth > dev->attrs.max_qp_wr) {
+		unsigned int overhead = newxprt->sc_max_bc_requests + 1;
+
 		rq_depth = dev->attrs.max_qp_wr;
-		newxprt->sc_recv_batch = 1;
-		newxprt->sc_max_requests = rq_depth - 2;
+		newxprt->sc_max_requests =
+			(rq_depth - overhead) / SVCRDMA_RQ_DEPTH_MULT;
 		newxprt->sc_max_bc_requests = 2;
 	}
 
@@ -468,7 +469,7 @@ static struct svc_xprt *svc_rdma_accept(struct svc_xprt *xprt)
 	 */
 	maxpayload = min(xprt->xpt_server->sv_max_payload,
 			 RPCSVC_MAXPAYLOAD_RDMA);
-	ctxts = newxprt->sc_max_requests * 3 *
+	ctxts = newxprt->sc_max_requests * SVCRDMA_RW_CTXT_MULT *
 		rdma_rw_mr_factor(dev, newxprt->sc_port_num,
 				  maxpayload >> PAGE_SHIFT);
 
