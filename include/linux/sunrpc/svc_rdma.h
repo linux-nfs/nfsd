@@ -129,7 +129,7 @@ struct svcxprt_rdma {
 	/* Receive path */
 	u32		     sc_pending_recvs ____cacheline_aligned_in_smp;
 	u32		     sc_recv_batch;
-	struct list_head     sc_rq_dto_q;
+	struct llist_head    sc_rq_dto_q;
 	struct list_head     sc_read_complete_q;
 	spinlock_t	     sc_rq_dto_lock;
 

@@ -361,11 +361,13 @@ static void svc_rdma_wc_receive(struct ib_cq *cq, struct ib_wc *wc)
 	/* All wc fields are now known to be valid */
 	ctxt->rc_byte_len = wc->byte_len;
 
-	spin_lock(&rdma->sc_rq_dto_lock);
-	list_add_tail(&ctxt->rc_list, &rdma->sc_rq_dto_q);
-	/* Note the unlock pairs with the smp_rmb in svc_xprt_ready: */
+	llist_add(&ctxt->rc_node, &rdma->sc_rq_dto_q);
+	/*
+	 * llist_add's cmpxchg provides full memory ordering,
+	 * pairing with the smp_rmb in svc_xprt_ready to ensure
+	 * the list update is visible before XPT_DATA is observed.
+	 */
 	set_bit(XPT_DATA, &rdma->sc_xprt.xpt_flags);
-	spin_unlock(&rdma->sc_rq_dto_lock);
 	if (!test_bit(RDMAXPRT_CONN_PENDING, &rdma->sc_flags))
 		svc_xprt_enqueue(&rdma->sc_xprt);
 	return;
@@ -388,13 +390,16 @@ dropped:
 void svc_rdma_flush_recv_queues(struct svcxprt_rdma *rdma)
 {
 	struct svc_rdma_recv_ctxt *ctxt;
+	struct llist_node *node;
 
 	while ((ctxt = svc_rdma_next_recv_ctxt(&rdma->sc_read_complete_q))) {
 		list_del(&ctxt->rc_list);
 		svc_rdma_recv_ctxt_put(rdma, ctxt);
 	}
-	while ((ctxt = svc_rdma_next_recv_ctxt(&rdma->sc_rq_dto_q))) {
-		list_del(&ctxt->rc_list);
+	node = llist_del_all(&rdma->sc_rq_dto_q);
+	while (node) {
+		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
+		node = node->next;
 		svc_rdma_recv_ctxt_put(rdma, ctxt);
 	}
 }
@@ -930,6 +935,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 	struct svcxprt_rdma *rdma_xprt =
 		container_of(xprt, struct svcxprt_rdma, sc_xprt);
 	struct svc_rdma_recv_ctxt *ctxt;
+	struct llist_node *node;
 	int ret;
 
 	/* Prevent svc_xprt_release() from releasing pages in rq_pages
@@ -949,13 +955,34 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 		svc_rdma_read_complete(rqstp, ctxt);
 		goto complete;
 	}
-	ctxt = svc_rdma_next_recv_ctxt(&rdma_xprt->sc_rq_dto_q);
-	if (ctxt)
-		list_del(&ctxt->rc_list);
-	else
+	spin_unlock(&rdma_xprt->sc_rq_dto_lock);
+
+	node = llist_del_first(&rdma_xprt->sc_rq_dto_q);
+	if (node) {
+		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
+	} else {
+		ctxt = NULL;
 		/* No new incoming requests, terminate the loop */
 		clear_bit(XPT_DATA, &xprt->xpt_flags);
-	spin_unlock(&rdma_xprt->sc_rq_dto_lock);
+
+		/*
+		 * If a completion arrived after llist_del_first but
+		 * before clear_bit, the producer's set_bit would be
+		 * cleared above. Recheck to close this race window.
+		 */
+		if (!llist_empty(&rdma_xprt->sc_rq_dto_q))
+			set_bit(XPT_DATA, &xprt->xpt_flags);
+
+		/* Recheck sc_read_complete_q under lock for the same
+		 * reason -- svc_rdma_wc_read_done() may have added an
+		 * entry and set XPT_DATA between our earlier unlock
+		 * and the clear_bit above.
+		 */
+		spin_lock(&rdma_xprt->sc_rq_dto_lock);
+		if (!list_empty(&rdma_xprt->sc_read_complete_q))
+			set_bit(XPT_DATA, &xprt->xpt_flags);
+		spin_unlock(&rdma_xprt->sc_rq_dto_lock);
+	}
 
 	/* Unblock the transport for the next receive */
 	svc_xprt_received(xprt);
