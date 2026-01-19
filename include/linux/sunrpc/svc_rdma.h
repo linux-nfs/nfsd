@@ -73,13 +73,30 @@ extern struct percpu_counter svcrdma_stat_recv;
 extern struct percpu_counter svcrdma_stat_sq_starve;
 extern struct percpu_counter svcrdma_stat_write;
 
+/*
+ * struct svcxprt_rdma - server-side RDMA transport
+ *
+ * Fields are grouped into cache-line-aligned zones to avoid false
+ * sharing between concurrent code paths. Each zone is marked with
+ * ____cacheline_aligned_in_smp on its first field.
+ *
+ *  SQ reservation	sc_sq_avail, ticket ordering, and connection
+ *			state -- no alignment constraint (struct head).
+ *  Send context cache	sc_send_lock, sc_send_ctxts, sc_pd, and
+ *			related
+ *  R/W context cache	sc_rw_ctxt_lock, sc_rw_ctxts, sc_qp, etc.
+ *  Receive path	sc_pending_recvs, sc_rq_dto_q, etc.
+ *
+ * When adding a field, place it in the zone whose code path modifies the
+ * field under load. Read-only fields can fill padding in any zone that
+ * accesses them. Fields modified by multiple paths remain at the end,
+ * outside any aligned zone.
+ */
 struct svcxprt_rdma {
 	struct svc_xprt      sc_xprt;		/* SVC transport structure */
 	struct rdma_cm_id    *sc_cm_id;		/* RDMA connection id */
 	struct list_head     sc_accept_q;	/* Conn. waiting accept */
 	struct rpcrdma_notification sc_rn;	/* removal notification */
-	int		     sc_ord;		/* RDMA read limit */
-	int                  sc_max_send_sges;
 	bool		     sc_snd_w_inv;	/* OK to use Send With Invalidate */
 
 	atomic_t             sc_sq_avail;	/* SQEs ready to be consumed */
@@ -91,23 +108,30 @@ struct svcxprt_rdma {
 	u32		     sc_max_requests;	/* Max requests */
 	u32		     sc_max_bc_requests;/* Backward credits */
 	int                  sc_max_req_size;	/* Size of each RQ WR buf */
-	u8		     sc_port_num;
 
-	struct ib_pd         *sc_pd;
-
-	spinlock_t	     sc_send_lock;
+	/* Send context cache */
+	spinlock_t	     sc_send_lock ____cacheline_aligned_in_smp;
 	struct llist_head    sc_send_ctxts;
-	spinlock_t	     sc_rw_ctxt_lock;
-	struct llist_head    sc_rw_ctxts;
+	/* sc_pd accessed during send context alloc */
+	struct ib_pd         *sc_pd;
+	int		     sc_ord;		/* RDMA read limit */
+	int                  sc_max_send_sges;
 
-	u32		     sc_pending_recvs;
+	/* R/W context cache */
+	spinlock_t	     sc_rw_ctxt_lock ____cacheline_aligned_in_smp;
+	struct llist_head    sc_rw_ctxts;
+	/* sc_qp and sc_port_num accessed together */
+	struct ib_qp         *sc_qp;
+	u8		     sc_port_num;
+	struct ib_cq         *sc_rq_cq;
+	struct ib_cq         *sc_sq_cq;
+
+	/* Receive path */
+	u32		     sc_pending_recvs ____cacheline_aligned_in_smp;
 	u32		     sc_recv_batch;
 	struct list_head     sc_rq_dto_q;
 	struct list_head     sc_read_complete_q;
 	spinlock_t	     sc_rq_dto_lock;
-	struct ib_qp         *sc_qp;
-	struct ib_cq         *sc_rq_cq;
-	struct ib_cq         *sc_sq_cq;
 
 	spinlock_t	     sc_lock;		/* transport lock */
 
