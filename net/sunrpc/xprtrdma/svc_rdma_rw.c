@@ -370,11 +370,13 @@ static void svc_rdma_wc_read_done(struct ib_cq *cq, struct ib_wc *wc)
 		trace_svcrdma_wc_read(wc, &cc->cc_cid, ctxt->rc_readbytes,
 				      cc->cc_posttime);
 
-		spin_lock(&rdma->sc_rq_dto_lock);
-		list_add_tail(&ctxt->rc_list, &rdma->sc_read_complete_q);
-		/* the unlock pairs with the smp_rmb in svc_xprt_ready */
+		llist_add(&ctxt->rc_node, &rdma->sc_read_complete_q);
+		/*
+		 * The implicit barrier of llist_add's cmpxchg pairs with
+		 * the smp_rmb in svc_xprt_ready, ensuring the list update
+		 * is visible before XPT_DATA is observed.
+		 */
 		set_bit(XPT_DATA, &rdma->sc_xprt.xpt_flags);
-		spin_unlock(&rdma->sc_rq_dto_lock);
 		svc_xprt_enqueue(&rdma->sc_xprt);
 		return;
 	case IB_WC_WR_FLUSH_ERR:

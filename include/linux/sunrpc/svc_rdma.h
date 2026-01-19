@@ -130,8 +130,7 @@ struct svcxprt_rdma {
 	u32		     sc_pending_recvs ____cacheline_aligned_in_smp;
 	u32		     sc_recv_batch;
 	struct llist_head    sc_rq_dto_q;
-	struct list_head     sc_read_complete_q;
-	spinlock_t	     sc_rq_dto_lock;
+	struct llist_head    sc_read_complete_q;
 
 	spinlock_t	     sc_lock;		/* transport lock */
 
@@ -203,7 +202,6 @@ struct svc_rdma_chunk_ctxt {
 
 struct svc_rdma_recv_ctxt {
 	struct llist_node	rc_node;
-	struct list_head	rc_list;
 	struct ib_recv_wr	rc_recv_wr;
 	struct ib_cqe		rc_cqe;
 	struct rpc_rdma_cid	rc_cid;

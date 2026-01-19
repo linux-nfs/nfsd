@@ -108,13 +108,6 @@
 
 static void svc_rdma_wc_receive(struct ib_cq *cq, struct ib_wc *wc);
 
-static inline struct svc_rdma_recv_ctxt *
-svc_rdma_next_recv_ctxt(struct list_head *list)
-{
-	return list_first_entry_or_null(list, struct svc_rdma_recv_ctxt,
-					rc_list);
-}
-
 static struct svc_rdma_recv_ctxt *
 svc_rdma_recv_ctxt_alloc(struct svcxprt_rdma *rdma)
 {
@@ -386,14 +379,21 @@ dropped:
  * svc_rdma_flush_recv_queues - Drain pending Receive work
  * @rdma: svcxprt_rdma being shut down
  *
+ * Called from svc_rdma_free() after ib_drain_qp() has blocked until
+ * completion queues are empty and flush_workqueue() has waited for
+ * pending work items. These preceding calls guarantee no concurrent
+ * producers (completion handlers) or consumers (svc_rdma_recvfrom)
+ * can be active, making unsynchronized llist_del_all() safe here.
  */
 void svc_rdma_flush_recv_queues(struct svcxprt_rdma *rdma)
 {
 	struct svc_rdma_recv_ctxt *ctxt;
 	struct llist_node *node;
 
-	while ((ctxt = svc_rdma_next_recv_ctxt(&rdma->sc_read_complete_q))) {
-		list_del(&ctxt->rc_list);
+	node = llist_del_all(&rdma->sc_read_complete_q);
+	while (node) {
+		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
+		node = node->next;
 		svc_rdma_recv_ctxt_put(rdma, ctxt);
 	}
 	node = llist_del_all(&rdma->sc_rq_dto_q);
@@ -946,17 +946,13 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 
 	rqstp->rq_xprt_ctxt = NULL;
 
-	spin_lock(&rdma_xprt->sc_rq_dto_lock);
-	ctxt = svc_rdma_next_recv_ctxt(&rdma_xprt->sc_read_complete_q);
-	if (ctxt) {
-		list_del(&ctxt->rc_list);
-		spin_unlock(&rdma_xprt->sc_rq_dto_lock);
+	node = llist_del_first(&rdma_xprt->sc_read_complete_q);
+	if (node) {
+		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
 		svc_xprt_received(xprt);
 		svc_rdma_read_complete(rqstp, ctxt);
 		goto complete;
 	}
-	spin_unlock(&rdma_xprt->sc_rq_dto_lock);
-
 	node = llist_del_first(&rdma_xprt->sc_rq_dto_q);
 	if (node) {
 		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
@@ -968,20 +964,12 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 		/*
 		 * If a completion arrived after llist_del_first but
 		 * before clear_bit, the producer's set_bit would be
-		 * cleared above. Recheck to close this race window.
+		 * cleared above. Recheck both queues to close this
+		 * race window.
 		 */
-		if (!llist_empty(&rdma_xprt->sc_rq_dto_q))
+		if (!llist_empty(&rdma_xprt->sc_rq_dto_q) ||
+		    !llist_empty(&rdma_xprt->sc_read_complete_q))
 			set_bit(XPT_DATA, &xprt->xpt_flags);
-
-		/* Recheck sc_read_complete_q under lock for the same
-		 * reason -- svc_rdma_wc_read_done() may have added an
-		 * entry and set XPT_DATA between our earlier unlock
-		 * and the clear_bit above.
-		 */
-		spin_lock(&rdma_xprt->sc_rq_dto_lock);
-		if (!list_empty(&rdma_xprt->sc_read_complete_q))
-			set_bit(XPT_DATA, &xprt->xpt_flags);
-		spin_unlock(&rdma_xprt->sc_rq_dto_lock);
 	}
 
 	/* Unblock the transport for the next receive */
