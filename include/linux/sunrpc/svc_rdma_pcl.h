@@ -22,6 +22,7 @@ struct svc_rdma_chunk {
 	u32			ch_payload_length;
 
 	u32			ch_segcount;
+	u32			ch_segmax;	/* allocated segment capacity */
 	struct svc_rdma_segment	ch_segments[];
 };
 
@@ -114,7 +115,16 @@ pcl_chunk_end_offset(const struct svc_rdma_chunk *chunk)
 
 struct svc_rdma_recv_ctxt;
 
-extern void pcl_free(struct svc_rdma_pcl *pcl);
+/*
+ * Cached chunks have capacity for this many segments.
+ * Typical clients can register up to 120KB per segment, so 4
+ * segments covers most NFS I/O operations. Larger chunks fall
+ * back to kmalloc.
+ */
+#define SVC_RDMA_CHUNK_SEGMAX		4
+
+extern void pcl_free(struct svc_rdma_recv_ctxt *rctxt,
+		     struct svc_rdma_pcl *pcl);
 extern bool pcl_alloc_call(struct svc_rdma_recv_ctxt *rctxt, __be32 *p);
 extern bool pcl_alloc_read(struct svc_rdma_recv_ctxt *rctxt, __be32 *p);
 extern bool pcl_alloc_write(struct svc_rdma_recv_ctxt *rctxt,

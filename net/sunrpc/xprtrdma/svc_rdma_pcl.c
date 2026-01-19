@@ -9,30 +9,70 @@
 #include "xprt_rdma.h"
 #include <trace/events/rpcrdma.h>
 
+static struct svc_rdma_chunk *rctxt_chunk_get(struct svc_rdma_recv_ctxt *rctxt)
+{
+	struct svc_rdma_chunk *chunk = rctxt->rc_chunk_cache;
+
+	if (chunk)
+		rctxt->rc_chunk_cache = NULL;
+	return chunk;
+}
+
+static void rctxt_chunk_put(struct svc_rdma_recv_ctxt *rctxt,
+			    struct svc_rdma_chunk *chunk)
+{
+	if (rctxt->rc_chunk_cache) {
+		kfree(chunk);
+		return;
+	}
+	rctxt->rc_chunk_cache = chunk;
+}
+
+static void rctxt_chunk_free(struct svc_rdma_recv_ctxt *rctxt,
+			     struct svc_rdma_chunk *chunk)
+{
+	if (chunk->ch_segmax == SVC_RDMA_CHUNK_SEGMAX)
+		rctxt_chunk_put(rctxt, chunk);
+	else
+		kfree(chunk);
+}
+
 /**
  * pcl_free - Release all memory associated with a parsed chunk list
+ * @rctxt: receive context containing @pcl
  * @pcl: parsed chunk list
  *
  */
-void pcl_free(struct svc_rdma_pcl *pcl)
+void pcl_free(struct svc_rdma_recv_ctxt *rctxt, struct svc_rdma_pcl *pcl)
 {
 	while (!list_empty(&pcl->cl_chunks)) {
 		struct svc_rdma_chunk *chunk;
 
 		chunk = pcl_first_chunk(pcl);
 		list_del(&chunk->ch_list);
-		kfree(chunk);
+		rctxt_chunk_free(rctxt, chunk);
 	}
 }
 
-static struct svc_rdma_chunk *pcl_alloc_chunk(u32 segcount, u32 position)
+static struct svc_rdma_chunk *pcl_alloc_chunk(struct svc_rdma_recv_ctxt *rctxt,
+					      u32 segcount, u32 position)
 {
 	struct svc_rdma_chunk *chunk;
+
+	if (segcount <= SVC_RDMA_CHUNK_SEGMAX) {
+		chunk = rctxt_chunk_get(rctxt);
+		if (chunk)
+			goto out;
+		/* Round up so all fresh allocations are cache-eligible */
+		segcount = SVC_RDMA_CHUNK_SEGMAX;
+	}
 
 	chunk = kmalloc_flex(*chunk, ch_segments, segcount);
 	if (!chunk)
 		return NULL;
+	chunk->ch_segmax = segcount;
 
+out:
 	chunk->ch_position = position;
 	chunk->ch_length = 0;
 	chunk->ch_payload_length = 0;
@@ -117,7 +157,7 @@ bool pcl_alloc_call(struct svc_rdma_recv_ctxt *rctxt, __be32 *p)
 			continue;
 
 		if (pcl_is_empty(pcl)) {
-			chunk = pcl_alloc_chunk(segcount, position);
+			chunk = pcl_alloc_chunk(rctxt, segcount, position);
 			if (!chunk)
 				return false;
 			pcl_insert_position(pcl, chunk);
@@ -172,7 +212,7 @@ bool pcl_alloc_read(struct svc_rdma_recv_ctxt *rctxt, __be32 *p)
 
 		chunk = pcl_lookup_position(pcl, position);
 		if (!chunk) {
-			chunk = pcl_alloc_chunk(segcount, position);
+			chunk = pcl_alloc_chunk(rctxt, segcount, position);
 			if (!chunk)
 				return false;
 			pcl_insert_position(pcl, chunk);
@@ -210,7 +250,7 @@ bool pcl_alloc_write(struct svc_rdma_recv_ctxt *rctxt,
 		p++;	/* skip the list discriminator */
 		segcount = be32_to_cpup(p++);
 
-		chunk = pcl_alloc_chunk(segcount, 0);
+		chunk = pcl_alloc_chunk(rctxt, segcount, 0);
 		if (!chunk)
 			return false;
 		list_add_tail(&chunk->ch_list, &pcl->cl_chunks);

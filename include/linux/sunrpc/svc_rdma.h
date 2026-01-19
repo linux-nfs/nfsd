@@ -225,6 +225,8 @@ struct svc_rdma_chunk_ctxt {
 
 struct svc_rdma_recv_ctxt {
 	struct llist_node	rc_node;
+	struct svcxprt_rdma	*rc_rdma;
+	struct svc_rdma_chunk	*rc_chunk_cache;
 	struct ib_recv_wr	rc_recv_wr;
 	struct ib_cqe		rc_cqe;
 	struct rpc_rdma_cid	rc_cid;

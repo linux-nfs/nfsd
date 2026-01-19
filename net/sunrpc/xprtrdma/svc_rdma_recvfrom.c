@@ -123,6 +123,7 @@ svc_rdma_recv_ctxt_alloc(struct svcxprt_rdma *rdma)
 			    GFP_KERNEL, node);
 	if (!ctxt)
 		goto fail0;
+	ctxt->rc_rdma = rdma;
 	ctxt->rc_maxpages = pages;
 	buffer = kmalloc_node(rdma->sc_max_req_size, GFP_KERNEL, node);
 	if (!buffer)
@@ -161,6 +162,7 @@ fail0:
 static void svc_rdma_recv_ctxt_destroy(struct svcxprt_rdma *rdma,
 				       struct svc_rdma_recv_ctxt *ctxt)
 {
+	kfree(ctxt->rc_chunk_cache);
 	ib_dma_unmap_single(rdma->sc_cm_id->device, ctxt->rc_recv_sge.addr,
 			    ctxt->rc_recv_sge.length, DMA_FROM_DEVICE);
 	kfree(ctxt->rc_recv_buf);
@@ -219,10 +221,10 @@ void svc_rdma_recv_ctxt_put(struct svcxprt_rdma *rdma,
 	 */
 	release_pages(ctxt->rc_pages, ctxt->rc_page_count);
 
-	pcl_free(&ctxt->rc_call_pcl);
-	pcl_free(&ctxt->rc_read_pcl);
-	pcl_free(&ctxt->rc_write_pcl);
-	pcl_free(&ctxt->rc_reply_pcl);
+	pcl_free(ctxt, &ctxt->rc_call_pcl);
+	pcl_free(ctxt, &ctxt->rc_read_pcl);
+	pcl_free(ctxt, &ctxt->rc_write_pcl);
+	pcl_free(ctxt, &ctxt->rc_reply_pcl);
 
 	llist_add(&ctxt->rc_node, &rdma->sc_recv_ctxts);
 }
