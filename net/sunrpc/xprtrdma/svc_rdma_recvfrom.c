@@ -917,6 +917,25 @@ static noinline void svc_rdma_read_complete(struct svc_rqst *rqstp,
 	trace_svcrdma_read_finished(&ctxt->rc_cid);
 }
 
+/*
+ * Recompute XPT_DATA from queue state after consuming a completion. A
+ * concurrent producer may have called llist_add and then set_bit(XPT_DATA)
+ * between this consumer's llist_del_first and the clear_bit below, causing
+ * clear_bit to erase the producer's signal. The barrier pairs with the
+ * implicit barrier in each producer's llist_add so that the llist_empty
+ * rechecks observe any add whose set_bit was erased.
+ */
+static void svc_rdma_update_xpt_data(struct svcxprt_rdma *rdma)
+{
+	struct svc_xprt *xprt = &rdma->sc_xprt;
+
+	clear_bit(XPT_DATA, &xprt->xpt_flags);
+	smp_mb__after_atomic();
+	if (!llist_empty(&rdma->sc_rq_dto_q) ||
+	    !llist_empty(&rdma->sc_read_complete_q))
+		set_bit(XPT_DATA, &xprt->xpt_flags);
+}
+
 /**
  * svc_rdma_recvfrom - Receive an RPC call
  * @rqstp: request structure into which to receive an RPC Call
@@ -965,6 +984,8 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 	node = llist_del_first(&rdma_xprt->sc_read_complete_q);
 	if (node) {
 		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
+
+		svc_rdma_update_xpt_data(rdma_xprt);
 		svc_xprt_received(xprt);
 		svc_rdma_read_complete(rqstp, ctxt);
 		goto complete;
@@ -975,17 +996,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 	} else {
 		ctxt = NULL;
 		/* No new incoming requests, terminate the loop */
-		clear_bit(XPT_DATA, &xprt->xpt_flags);
-
-		/*
-		 * If a completion arrived after llist_del_first but
-		 * before clear_bit, the producer's set_bit would be
-		 * cleared above. Recheck both queues to close this
-		 * race window.
-		 */
-		if (!llist_empty(&rdma_xprt->sc_rq_dto_q) ||
-		    !llist_empty(&rdma_xprt->sc_read_complete_q))
-			set_bit(XPT_DATA, &xprt->xpt_flags);
+		svc_rdma_update_xpt_data(rdma_xprt);
 	}
 
 	/* Unblock the transport for the next receive */
