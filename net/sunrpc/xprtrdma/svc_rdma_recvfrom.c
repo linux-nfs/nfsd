@@ -981,6 +981,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 
 	rqstp->rq_xprt_ctxt = NULL;
 
+retry:
 	node = llist_del_first(&rdma_xprt->sc_read_complete_q);
 	if (node) {
 		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
@@ -995,8 +996,19 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
 		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
 	} else {
 		ctxt = NULL;
-		/* No new incoming requests, terminate the loop */
 		svc_rdma_update_xpt_data(rdma_xprt);
+		/*
+		 * A completion may have arrived between the
+		 * llist_del_first above and the queue recheck
+		 * inside svc_rdma_update_xpt_data. This thread
+		 * holds XPT_BUSY, preventing any other consumer
+		 * from draining the queue in the meantime.
+		 * Retry at most once to avoid a full svc_recv
+		 * round-trip: the second iteration is guaranteed
+		 * to find data or clear XPT_DATA.
+		 */
+		if (test_bit(XPT_DATA, &xprt->xpt_flags))
+			goto retry;
 	}
 
 	/* Unblock the transport for the next receive */
