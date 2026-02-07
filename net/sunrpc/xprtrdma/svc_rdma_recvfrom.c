@@ -994,6 +994,7 @@ retry:
 	node = llist_del_first(&rdma_xprt->sc_rq_dto_q);
 	if (node) {
 		ctxt = llist_entry(node, struct svc_rdma_recv_ctxt, rc_node);
+		svc_rdma_update_xpt_data(rdma_xprt);
 	} else {
 		ctxt = NULL;
 		svc_rdma_update_xpt_data(rdma_xprt);
