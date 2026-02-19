@@ -66,7 +66,6 @@ extern unsigned int svcrdma_ord;
 extern unsigned int svcrdma_max_requests;
 extern unsigned int svcrdma_max_bc_requests;
 extern unsigned int svcrdma_max_req_size;
-extern struct workqueue_struct *svcrdma_wq;
 
 extern struct percpu_counter svcrdma_stat_read;
 extern struct percpu_counter svcrdma_stat_recv;
@@ -89,8 +88,9 @@ extern struct percpu_counter svcrdma_stat_write;
  *
  * When adding a field, place it in the zone whose code path modifies the
  * field under load. Read-only fields can fill padding in any zone that
- * accesses them. Fields modified by multiple paths remain at the end,
- * outside any aligned zone.
+ * accesses them. Fields modified by multiple paths (e.g.
+ * sc_recv_ctxts, sc_send_release_list) remain at the end, outside
+ * any aligned zone.
  */
 struct svcxprt_rdma {
 	struct svc_xprt      sc_xprt;		/* SVC transport structure */
@@ -139,6 +139,8 @@ struct svcxprt_rdma {
 	struct work_struct   sc_work;
 
 	struct llist_head    sc_recv_ctxts;
+
+	struct llist_head    sc_send_release_list;
 
 	atomic_t	     sc_completion_ids;
 };
@@ -257,7 +259,6 @@ struct svc_rdma_write_info {
 struct svc_rdma_send_ctxt {
 	struct llist_node	sc_node;
 	struct rpc_rdma_cid	sc_cid;
-	struct work_struct	sc_work;
 
 	struct svcxprt_rdma	*sc_rdma;
 	struct ib_send_wr	sc_send_wr;
@@ -321,6 +322,7 @@ extern int svc_rdma_process_read_list(struct svcxprt_rdma *rdma,
 
 /* svc_rdma_sendto.c */
 extern void svc_rdma_send_ctxts_destroy(struct svcxprt_rdma *rdma);
+extern void svc_rdma_send_ctxts_drain(struct svcxprt_rdma *rdma);
 extern struct svc_rdma_send_ctxt *
 		svc_rdma_send_ctxt_get(struct svcxprt_rdma *rdma);
 extern void svc_rdma_send_ctxt_put(struct svcxprt_rdma *rdma,

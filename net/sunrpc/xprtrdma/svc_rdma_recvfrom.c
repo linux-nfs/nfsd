@@ -244,6 +244,8 @@ void svc_rdma_release_ctxt(struct svc_xprt *xprt, void *vctxt)
 
 	if (ctxt)
 		svc_rdma_recv_ctxt_put(rdma, ctxt);
+
+	svc_rdma_send_ctxts_drain(rdma);
 }
 
 static bool svc_rdma_refresh_recvs(struct svcxprt_rdma *rdma,
@@ -379,11 +381,9 @@ dropped:
  * svc_rdma_flush_recv_queues - Drain pending Receive work
  * @rdma: svcxprt_rdma being shut down
  *
- * Called from svc_rdma_free() after ib_drain_qp() has blocked until
- * completion queues are empty and flush_workqueue() has waited for
- * pending work items. These preceding calls guarantee no concurrent
- * producers (completion handlers) or consumers (svc_rdma_recvfrom)
- * can be active, making unsynchronized llist_del_all() safe here.
+ * Caller must guarantee that @rdma's Send Completion queue is empty and
+ * all send contexts have been released. This guarantees concurrent
+ * producers and consumers are no longer active.
  */
 void svc_rdma_flush_recv_queues(struct svcxprt_rdma *rdma)
 {
