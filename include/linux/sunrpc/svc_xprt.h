@@ -37,6 +37,8 @@ struct svc_xprt_class {
 	struct list_head	xcl_list;
 	u32			xcl_max_payload;
 	int			xcl_ident;
+	u32			xcl_flags;
+#define SVC_XPRT_FLAG_WSPACE_RESERVE	BIT(0)
 };
 
 /*
