@@ -191,6 +191,14 @@ struct nfs_client *nfs_alloc_client(const struct nfs_client_initdata *cl_init)
 
 	clp->cl_principal = "*";
 	clp->cl_xprtsec = cl_init->xprtsec;
+	/*
+	 * Every client in a namespace names the same keyring, and
+	 * cl_init->xprtsec carries no serial yet, so nfs_match_client()
+	 * must not compare keyring_serial.
+	 */
+	if (clp->cl_xprtsec.policy == RPC_XPRTSEC_TLS_X509)
+		clp->cl_xprtsec.keyring_serial =
+			key_serial(nfs_net_keyring(clp->cl_net));
 	return clp;
 
 error_cleanup:
@@ -549,7 +557,7 @@ int nfs_create_rpc_client(struct nfs_client *clp,
 		.version	= clp->rpc_ops->version,
 		.authflavor	= flavor,
 		.cred		= cl_init->cred,
-		.xprtsec	= cl_init->xprtsec,
+		.xprtsec	= clp->cl_xprtsec,
 		.connect_timeout = cl_init->connect_timeout,
 		.reconnect_timeout = cl_init->reconnect_timeout,
 	};
