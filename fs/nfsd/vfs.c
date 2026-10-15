@@ -1238,10 +1238,14 @@ nfsd_direct_read(struct svc_rqst *rqstp, struct svc_fh *fhp,
 				eof, host_err);
 }
 
-static bool nfsd_direct_read_ok(struct svc_rqst *rqstp, struct nfsd_file *nf)
+static bool nfsd_direct_read_ok(struct svc_rqst *rqstp, struct nfsd_file *nf,
+				unsigned long count)
 {
 	/* When dio_read_offset_align is zero, dio is not supported */
 	if (!nf->nf_dio_read_offset_align)
+		return false;
+	/* Not worth rounding a READ this small out to whole alignment units */
+	if (count < nf->nf_dio_read_offset_align)
 		return false;
 	if (rqstp->rq_res.page_len)
 		return false;
@@ -1294,7 +1298,7 @@ __be32 nfsd_iter_read(struct svc_rqst *rqstp, struct svc_fh *fhp,
 	case NFSD_IO_BUFFERED:
 		break;
 	case NFSD_IO_DIRECT:
-		if (nfsd_direct_read_ok(rqstp, nf))
+		if (nfsd_direct_read_ok(rqstp, nf, *count))
 			return nfsd_direct_read(rqstp, fhp, nf, offset,
 						count, page, eof);
 		fallthrough;
