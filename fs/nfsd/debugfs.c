@@ -152,6 +152,19 @@ void nfsd_debugfs_init(void)
 	 */
 	debugfs_create_u32("direct_misaligned_min_bytes", 0644, nfsd_top_dir,
 			   &nfsd_direct_misaligned_min_bytes);
+
+	/*
+	 * /sys/kernel/debug/nfsd/direct_misaligned_dontcache
+	 *
+	 *   Y: the start and end segments of a split direct-mode WRITE, and
+	 *      a WRITE that is not split, use DONTCACHE buffered IO when
+	 *      the file system supports FOP_DONTCACHE
+	 *   N: those segments use normal buffered IO
+	 *
+	 * The default value of this setting is Y.
+	 */
+	debugfs_create_bool("direct_misaligned_dontcache", 0644, nfsd_top_dir,
+			    &nfsd_direct_misaligned_dontcache);
 #ifdef CONFIG_NFSD_V4
 	debugfs_create_bool("delegated_timestamps", 0644, nfsd_top_dir,
 			    &nfsd_delegts_enabled);
