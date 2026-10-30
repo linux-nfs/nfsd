@@ -29,6 +29,8 @@
 #include <linux/sunrpc/clnt.h>
 #include <linux/sunrpc/bc_xprt.h>
 
+#include <asm/barrier.h>
+
 #include <trace/events/sunrpc.h>
 
 #include "fail.h"
@@ -692,6 +694,13 @@ void svc_pool_wake_idle_thread(struct svc_pool *pool)
 {
 	struct svc_rqst	*rqstp;
 	struct llist_node *ln;
+
+	/*
+	 * Order the caller's stores before the lockless checks below, which can
+	 * skip wake_up_process() and its barrier. Pairs with set_current_state()
+	 * and llist_add() in svc_thread_wait_for_work().
+	 */
+	smp_mb();
 
 	rcu_read_lock();
 	ln = READ_ONCE(pool->sp_idle_threads.first);
